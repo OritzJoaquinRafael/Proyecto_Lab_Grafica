@@ -1,7 +1,7 @@
-// Práctica 9
-// Ortiz Valles Joaquin Rafael
-// Fecha de entrega: 18/10/2026
-// Número de cuenta: 319071616
+// Proyecto 
+// Ortiz Valles Joaquin Rafael y Juárez Osorio Josue Alexis
+// Fecha de entrega: 11/11/2026
+
 
 #include <iostream>
 #include <cmath>
