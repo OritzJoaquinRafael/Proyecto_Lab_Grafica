@@ -1,7 +1,7 @@
 // Proyecto 
 // Ortiz Valles Joaquin Rafael y Juárez Osorio Josue Alexis
 // Fecha de entrega: 11/11/2026
-// prueba 2
+// prueba 3
 
 #include <iostream>
 #include <cmath>
