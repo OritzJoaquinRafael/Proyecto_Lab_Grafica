@@ -1,7 +1,7 @@
 // Proyecto 
 // Ortiz Valles Joaquin Rafael y Juárez Osorio Josue Alexis
 // Fecha de entrega: 11/11/2026
-// prueba
+// prueba 2
 
 #include <iostream>
 #include <cmath>
@@ -123,7 +123,7 @@ int main()
 	glfwWindowHint(GLFW_RESIZABLE, GL_FALSE);*/
 
 	// Create a GLFWwindow object that we can use for GLFW's functions
-	GLFWwindow* window = glfwCreateWindow(WIDTH, HEIGHT, "Practica 9 - Ortiz Valles Joaquin Rafael", nullptr, nullptr);
+	GLFWwindow* window = glfwCreateWindow(WIDTH, HEIGHT, "Proyecto", nullptr, nullptr);
 
 	if (nullptr == window)
 	{
