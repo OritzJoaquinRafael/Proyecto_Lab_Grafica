@@ -1,0 +1,16 @@
+newmtl Glass_Red
+Ka 0.6 0.196078 0.305882
+Kd 0.6039 0.1961 0.3098
+Ks 1 1 1
+illum 2
+Ns 512
+d 0.25
+map_Kd botella.png
+
+newmtl Plastic_Gold
+Ka 0.705882 0.521569 0.113725
+Kd 0.6549 0.5255 0.1804
+Ks 0.941177 0.913726 0.819608
+illum 2
+Ns 128
+map_Kd botella.png
