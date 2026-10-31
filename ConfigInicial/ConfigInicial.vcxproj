@@ -31,7 +31,7 @@
     <None Include="Shader\modelLoading.vs" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Practica11_Rafael_Ortiz.cpp" />
+    <ClCompile Include="Proyecto_Lab.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>17.0</VCProjectVersion>
@@ -91,12 +91,12 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>C:\Users\Recua\OneDrive\Escritorio\ConfigInicial\External Libraries\assimp\include;C:\Users\Recua\OneDrive\Escritorio\ConfigInicial\External Libraries;C:\Users\Recua\OneDrive\Escritorio\ConfigInicial\External Libraries\GLEW\include;C:\Users\Recua\OneDrive\Escritorio\ConfigInicial\External Libraries\GLFW\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)External Libraries\assimp\include;$(SolutionDir)External Libraries;$(SolutionDir)External Libraries\GLFW\include;$(SolutionDir)External Libraries\GLEW\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>C:\Users\Recua\OneDrive\Escritorio\ConfigInicial\External Libraries\assimp\lib;C:\Users\Recua\OneDrive\Escritorio\ConfigInicial\External Libraries\SOIL2\lib;C:\Users\Recua\OneDrive\Escritorio\ConfigInicial\External Libraries\GLFW\lib-vc2015;C:\Users\Recua\OneDrive\Escritorio\ConfigInicial\External Libraries\GLEW\lib\Release\Win32;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(SolutionDir)External Libraries\assimp\lib;$(SolutionDir)External Libraries\SOIL2\lib;$(SolutionDir)External Libraries\GLFW\lib-vc2015;$(SolutionDir)External Libraries\GLEW\lib\Release\Win32;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>soil2-debug.lib;assimp-vc140-mt.lib;opengl32.lib;glew32.lib;glfw3.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
@@ -108,12 +108,12 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>C:\Users\Recua\OneDrive\Escritorio\ConfigInicial\External Libraries\assimp\include;C:\Users\Recua\OneDrive\Escritorio\ConfigInicial\External Libraries;C:\Users\Recua\OneDrive\Escritorio\ConfigInicial\External Libraries\GLEW\include;C:\Users\Recua\OneDrive\Escritorio\ConfigInicial\External Libraries\GLFW\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)External Libraries\assimp\include;$(SolutionDir)External Libraries;$(SolutionDir)External Libraries\GLFW\include;$(SolutionDir)External Libraries\GLEW\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>C:\Users\Recua\OneDrive\Escritorio\ConfigInicial\External Libraries\assimp\lib;C:\Users\Recua\OneDrive\Escritorio\ConfigInicial\External Libraries\SOIL2\lib;C:\Users\Recua\OneDrive\Escritorio\ConfigInicial\External Libraries\GLFW\lib-vc2015;C:\Users\Recua\OneDrive\Escritorio\ConfigInicial\External Libraries\GLEW\lib\Release\Win32;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(SolutionDir)External Libraries\assimp\lib;$(SolutionDir)External Libraries\SOIL2\lib;$(SolutionDir)External Libraries\GLFW\lib-vc2015;$(SolutionDir)External Libraries\GLEW\lib\Release\Win32;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>soil2-debug.lib;assimp-vc140-mt.lib;opengl32.lib;glew32.lib;glfw3.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
@@ -123,12 +123,12 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>C:\Users\Recua\OneDrive\Escritorio\ConfigInicial\External Libraries\assimp\include;C:\Users\Recua\OneDrive\Escritorio\ConfigInicial\External Libraries;C:\Users\Recua\OneDrive\Escritorio\ConfigInicial\External Libraries\GLEW\include;C:\Users\Recua\OneDrive\Escritorio\ConfigInicial\External Libraries\GLFW\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)External Libraries\assimp\include;$(SolutionDir)External Libraries;$(SolutionDir)External Libraries\GLFW\include;$(SolutionDir)External Libraries\GLEW\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>C:\Users\Recua\OneDrive\Escritorio\ConfigInicial\External Libraries\assimp\lib;C:\Users\Recua\OneDrive\Escritorio\ConfigInicial\External Libraries\SOIL2\lib;C:\Users\Recua\OneDrive\Escritorio\ConfigInicial\External Libraries\GLFW\lib-vc2015;C:\Users\Recua\OneDrive\Escritorio\ConfigInicial\External Libraries\GLEW\lib\Release\Win32;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(SolutionDir)External Libraries\assimp\lib;$(SolutionDir)External Libraries\SOIL2\lib;$(SolutionDir)External Libraries\GLFW\lib-vc2015;$(SolutionDir)External Libraries\GLEW\lib\Release\Win32;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>soil2-debug.lib;assimp-vc140-mt.lib;opengl32.lib;glew32.lib;glfw3.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
@@ -140,12 +140,12 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>C:\Users\Recua\OneDrive\Escritorio\ConfigInicial\External Libraries\assimp\include;C:\Users\Recua\OneDrive\Escritorio\ConfigInicial\External Libraries;C:\Users\Recua\OneDrive\Escritorio\ConfigInicial\External Libraries\GLEW\include;C:\Users\Recua\OneDrive\Escritorio\ConfigInicial\External Libraries\GLFW\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)External Libraries\assimp\include;$(SolutionDir)External Libraries;$(SolutionDir)External Libraries\GLFW\include;$(SolutionDir)External Libraries\GLEW\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>C:\Users\Recua\OneDrive\Escritorio\ConfigInicial\External Libraries\assimp\lib;C:\Users\Recua\OneDrive\Escritorio\ConfigInicial\External Libraries\SOIL2\lib;C:\Users\Recua\OneDrive\Escritorio\ConfigInicial\External Libraries\GLFW\lib-vc2015;C:\Users\Recua\OneDrive\Escritorio\ConfigInicial\External Libraries\GLEW\lib\Release\Win32;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(SolutionDir)External Libraries\assimp\lib;$(SolutionDir)External Libraries\SOIL2\lib;$(SolutionDir)External Libraries\GLFW\lib-vc2015;$(SolutionDir)External Libraries\GLEW\lib\Release\Win32;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>soil2-debug.lib;assimp-vc140-mt.lib;opengl32.lib;glew32.lib;glfw3.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
