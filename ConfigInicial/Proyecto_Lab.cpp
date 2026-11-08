@@ -162,13 +162,18 @@ int main()
 	Shader lampShader("Shader/lamp.vs", "Shader/lamp.frag");
 
 
-	Model ball((char*)"Models/ball.obj");
-	Model dog((char*)"Models/RedDog.obj");
-	Model Luna((char*)"Models/moon.obj");
+	//Model ball((char*)"Models/ball.obj");
+	//Model dog((char*)"Models/RedDog.obj");
+	//Model Luna((char*)"Models/moon.obj");
 	Model Ciu((char*)"Models/Residential Buildings 001.obj");
-	Model Road((char*)"Models/road.obj");
+	//Model Road((char*)"Models/road.obj");
 	Model Ciu2((char*)"Models/Residential Buildings 002.obj");
-
+	//Model arb((char*)"Models/arbol.obj");
+	Model Mue((char*)"Models/muelle.obj");
+	Model Mue1((char*)"Models/muelle1.obj");
+	Model Tor((char*)"Models/torii.obj");
+	Model Sho((char*)"Models/shorobuni.obj");
+	Model Pue((char*)"Models/puente.obj");
 
 	// First, set the container's VAO (and VBO)
 	GLuint VBO, VAO;
@@ -189,7 +194,7 @@ int main()
 	glUniform1i(glGetUniformLocation(lightingShader.Program, "Material.difuse"), 0);
 	glUniform1i(glGetUniformLocation(lightingShader.Program, "Material.specular"), 1);
 
-	glm::mat4 projection = glm::perspective(camera.GetZoom(), (GLfloat)SCREEN_WIDTH / (GLfloat)SCREEN_HEIGHT, 0.1f, 100.0f);
+	glm::mat4 projection = glm::perspective(camera.GetZoom(), (GLfloat)SCREEN_WIDTH / (GLfloat)SCREEN_HEIGHT, 0.1f, 1000.0f);
 
 	// Game loop
 	while (!glfwWindowShouldClose(window))
@@ -330,67 +335,138 @@ int main()
 		glm::mat4 model = glm::mat4(1.0f);
 		glEnable(GL_BLEND);
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-		model = glm::mat4(1.0f);
-		model = glm::translate(model, glm::vec3(-1.5f, 0.4f, 0.0f));
-		model = glm::scale(model, glm::vec3(2.0f, 2.0f, 2.0f));
-		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-		glUniform1i(glGetUniformLocation(lightingShader.Program, "transparency"), 1);
-		ball.Draw(lightingShader);
+
+		//model = glm::mat4(1.0f);
+		//model = glm::translate(model, glm::vec3(-1.5f, 0.4f, 0.0f));
+		//model = glm::scale(model, glm::vec3(2.0f, 2.0f, 2.0f));
+		//glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		//glUniform1i(glGetUniformLocation(lightingShader.Program, "transparency"), 1);
+		//ball.Draw(lightingShader);
 		glDisable(GL_BLEND);
 		glBindVertexArray(0);
 
-		// 1. DIBUJAR PERRO
-		model = glm::mat4(1.0f);
-		model = glm::translate(model, glm::vec3(0.0f, 0.7f, 0.0f));
-		model = glm::scale(model, glm::vec3(3.0f, 3.0f, 3.0f));
-		glUniformMatrix4fv(glGetUniformLocation(lightingShader.Program, "model"), 1, GL_FALSE, glm::value_ptr(model));
-		glBindVertexArray(VAO);
-		dog.Draw(lightingShader);
+		//// 1. DIBUJAR PERRO
+		//model = glm::mat4(1.0f);
+		//model = glm::translate(model, glm::vec3(0.0f, 0.7f, 0.0f));
+		//model = glm::scale(model, glm::vec3(3.0f, 3.0f, 3.0f));
+		//glUniformMatrix4fv(glGetUniformLocation(lightingShader.Program, "model"), 1, GL_FALSE, glm::value_ptr(model));
+		//glBindVertexArray(VAO);
+		//dog.Draw(lightingShader);
 
-		// 2. DIBUJAR LUNA
-		model = glm::mat4(1.0f);
-		model = glm::translate(model, posicionLuna);
-		model = glm::scale(model, glm::vec3(0.1f));
-		glUniformMatrix4fv(glGetUniformLocation(lightingShader.Program, "model"), 1, GL_FALSE, glm::value_ptr(model));
-		Luna.Draw(lightingShader);
+		//// 2. DIBUJAR LUNA
+		//model = glm::mat4(1.0f);
+		//model = glm::translate(model, posicionLuna);
+		//model = glm::scale(model, glm::vec3(0.1f));
+		//glUniformMatrix4fv(glGetUniformLocation(lightingShader.Program, "model"), 1, GL_FALSE, glm::value_ptr(model));
+		//Luna.Draw(lightingShader);
 
 		// 3. DIBUJAR CIUDAD
 		model = glm::mat4(1.0f);
-		model = glm::translate(model, glm::vec3(-15.0f, -0.7f, -6.5f));
-		model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));
+		model = glm::translate(model, glm::vec3(-79.5f, 5.0f, -0.8f));
+		model = glm::scale(model, glm::vec3(1.5f, 1.5f, 1.5f));
 		glUniformMatrix4fv(glGetUniformLocation(lightingShader.Program, "model"), 1, GL_FALSE, glm::value_ptr(model));
 		Ciu.Draw(lightingShader);
 
-		// 3B. DIBUJAR SEGUNDA CIUDAD
-		model = glm::mat4(1.0f);
-		model = glm::translate(model, glm::vec3(11.0f, -0.7f, -28.0f));
-		model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));
-		model = glm::rotate(model, glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-		glUniformMatrix4fv(glGetUniformLocation(lightingShader.Program, "model"), 1, GL_FALSE, glm::value_ptr(model));
-		Ciu.Draw(lightingShader);
+		//// 3B. DIBUJAR SEGUNDA CIUDAD
+		//model = glm::mat4(1.0f);
+		//model = glm::translate(model, glm::vec3(11.0f, -0.7f, -28.0f));
+		//model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));
+		//model = glm::rotate(model, glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+		//glUniformMatrix4fv(glGetUniformLocation(lightingShader.Program, "model"), 1, GL_FALSE, glm::value_ptr(model));
+		//Ciu.Draw(lightingShader);
 
-		// 4. DIBUJAR CARRETERA
-		model = glm::mat4(1.0f);
-		model = glm::translate(model, glm::vec3(-1.8f, -0.7f, -22.0f));
-		model = glm::scale(model, glm::vec3(4.0f, 1.0f, 6.0f));
-		glUniformMatrix4fv(glGetUniformLocation(lightingShader.Program, "model"), 1, GL_FALSE, glm::value_ptr(model));
-		Road.Draw(lightingShader);
+		//// 4. DIBUJAR CARRETERA
+		//model = glm::mat4(1.0f);
+		//model = glm::translate(model, glm::vec3(-1.8f, -0.7f, -22.0f));
+		//model = glm::scale(model, glm::vec3(4.0f, 1.0f, 6.0f));
+		//glUniformMatrix4fv(glGetUniformLocation(lightingShader.Program, "model"), 1, GL_FALSE, glm::value_ptr(model));
+		//Road.Draw(lightingShader);
 
 		// 5. DIBUJAR TERCERA CIUDAD
 		model = glm::mat4(1.0f);
-		model = glm::translate(model, glm::vec3(-15.0f, -0.7f, -31.0f));
-		model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));
+		model = glm::translate(model, glm::vec3(-79.5f, 5.0f, -38.0f));
+		model = glm::scale(model, glm::vec3(1.5f, 1.5f, 1.5f));
 		glUniformMatrix4fv(glGetUniformLocation(lightingShader.Program, "model"), 1, GL_FALSE, glm::value_ptr(model));
 		Ciu2.Draw(lightingShader);
 
-		// 5B. DIBUJAR CUARTA CIUDAD
+		//// 5B. DIBUJAR CUARTA CIUDAD
+		//model = glm::mat4(1.0f);
+		//model = glm::translate(model, glm::vec3(11.0f, -0.7f, -6.0f));
+		//model = glm::rotate(model, glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+		//model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));
+		//glUniformMatrix4fv(glGetUniformLocation(lightingShader.Program, "model"), 1, GL_FALSE, glm::value_ptr(model));
+		//Ciu2.Draw(lightingShader);
+
+		//// 7. Arbol
+		//model = glm::mat4(1.0f);
+		//model = glm::translate(model, glm::vec3(4.0f, -0.7f, -3.0f)); // sobre el suelo, a un lado del perro
+		//model = glm::scale(model, glm::vec3(2.0f));                    // ~3.8 de alto
+		//glUniformMatrix4fv(glGetUniformLocation(lightingShader.Program, "model"), 1, GL_FALSE, glm::value_ptr(model));
+		//glUniform1i(glGetUniformLocation(lightingShader.Program, "transparency"), 0); // ver nota
+		//arb.Draw(lightingShader);
+
+		// 8. Muelle Izquierdo 1
 		model = glm::mat4(1.0f);
-		model = glm::translate(model, glm::vec3(11.0f, -0.7f, -6.0f));
-		model = glm::rotate(model, glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-		model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));
+		model = glm::translate(model, glm::vec3(-40.0f, -10.0f, -22.0f)); // sobre el suelo, a un lado del perro
+		model = glm::scale(model, glm::vec3(40.0f, 40.0f, 40.0f));
+		model = glm::rotate(model, glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 		glUniformMatrix4fv(glGetUniformLocation(lightingShader.Program, "model"), 1, GL_FALSE, glm::value_ptr(model));
-		Ciu2.Draw(lightingShader);
+		glUniform1i(glGetUniformLocation(lightingShader.Program, "transparency"), 0); // ver nota
+		Mue.Draw(lightingShader);
 
+		// 8.1 Muelle Izquierdo 2
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(-40.0f, -10.0f, -97.0f)); // sobre el suelo, a un lado del perro
+		model = glm::scale(model, glm::vec3(40.0f, 40.0f, 40.0f));
+		model = glm::rotate(model, glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+		glUniformMatrix4fv(glGetUniformLocation(lightingShader.Program, "model"), 1, GL_FALSE, glm::value_ptr(model));
+		glUniform1i(glGetUniformLocation(lightingShader.Program, "transparency"), 0); // ver nota
+		Mue1.Draw(lightingShader);
+
+		// 9. Muelle Derecho 1
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(40.0f, -10.0f, -22.0f)); // sobre el suelo, a un lado del perro
+		model = glm::scale(model, glm::vec3(40.0f, 40.0f, 40.0f));
+		model = glm::rotate(model, glm::radians(270.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+		glUniformMatrix4fv(glGetUniformLocation(lightingShader.Program, "model"), 1, GL_FALSE, glm::value_ptr(model));
+		glUniform1i(glGetUniformLocation(lightingShader.Program, "transparency"), 0); // ver nota
+		Mue1.Draw(lightingShader);
+
+		// 9.1 Muelle Derecho 2
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(40.0f, -10.0f, -97.0f)); // sobre el suelo, a un lado del perro
+		model = glm::scale(model, glm::vec3(40.0f, 40.0f, 40.0f));
+		model = glm::rotate(model, glm::radians(270.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+		glUniformMatrix4fv(glGetUniformLocation(lightingShader.Program, "model"), 1, GL_FALSE, glm::value_ptr(model));
+		glUniform1i(glGetUniformLocation(lightingShader.Program, "transparency"), 0); // ver nota
+		Mue.Draw(lightingShader);
+
+		// 10. Torii
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(0.0f, -10.0f, -90.0f)); // sobre el suelo, a un lado del perro
+		model = glm::scale(model, glm::vec3(20.0f, 20.0f, 20.0f));
+		model = glm::rotate(model, glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+		glUniformMatrix4fv(glGetUniformLocation(lightingShader.Program, "model"), 1, GL_FALSE, glm::value_ptr(model));
+		glUniform1i(glGetUniformLocation(lightingShader.Program, "transparency"), 0); // ver nota
+		Tor.Draw(lightingShader);
+
+		// 11. Shorobuni
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(-14.0f, -10.0f, -30.0f)); // sobre el suelo, a un lado del perro
+		model = glm::scale(model, glm::vec3(4.0f, 4.0f, 4.0f));
+		model = glm::rotate(model, glm::radians(45.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+		glUniformMatrix4fv(glGetUniformLocation(lightingShader.Program, "model"), 1, GL_FALSE, glm::value_ptr(model));
+		glUniform1i(glGetUniformLocation(lightingShader.Program, "transparency"), 0); // ver nota
+		Sho.Draw(lightingShader);
+
+		// 12. Puente
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(0.0f, -10.0f, -60.0f)); // sobre el suelo, a un lado del perro
+		model = glm::scale(model, glm::vec3(31.0f, 11.0f, 21.0f));
+		//model = glm::rotate(model, glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+		glUniformMatrix4fv(glGetUniformLocation(lightingShader.Program, "model"), 1, GL_FALSE, glm::value_ptr(model));
+		glUniform1i(glGetUniformLocation(lightingShader.Program, "transparency"), 0); // ver nota
+		Pue.Draw(lightingShader);
 
 		glBindVertexArray(0);
 
