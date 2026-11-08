@@ -13,11 +13,14 @@
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
 
-
-
 #include "Shader.h"
 
+#include <cstddef>
+
 using namespace std;
+
+// NUEVO: Cantidad máxima de huesos que pueden influenciar a un solo vértice
+const int MAX_BONE_INFLUENCE = 4;
 
 struct Vertex
 {
@@ -27,6 +30,21 @@ struct Vertex
 	glm::vec3 Normal;
 	// TexCoords
 	glm::vec2 TexCoords;
+
+	// NUEVO: IDs de los 4 huesos que afectan a este vértice
+	int m_BoneIDs[MAX_BONE_INFLUENCE];
+	// NUEVO: Pesos de influencia correspondientes a cada hueso
+	float m_Weights[MAX_BONE_INFLUENCE];
+
+	// NUEVO: Constructor para limpiar e inicializar los datos de animación por defecto
+	Vertex()
+	{
+		for (int i = 0; i < MAX_BONE_INFLUENCE; i++)
+		{
+			m_BoneIDs[i] = -1;    // -1 significa que no hay hueso asignado
+			m_Weights[i] = 0.0f;   // 0.0 significa 0% de peso inicial
+		}
+	}
 };
 
 struct Texture
@@ -66,7 +84,7 @@ public:
 		for (GLuint i = 0; i < this->textures.size(); i++)
 		{
 			glActiveTexture(GL_TEXTURE0 + i); // Active proper texture unit before binding
-											  // Retrieve texture number (the N in diffuse_textureN)
+			// Retrieve texture number (the N in diffuse_textureN)
 			stringstream ss;
 			string number;
 			string name = this->textures[i].type;
@@ -119,24 +137,31 @@ private:
 		glBindVertexArray(this->VAO);
 		// Load data into vertex buffers
 		glBindBuffer(GL_ARRAY_BUFFER, this->VBO);
-		// A great thing about structs is that their memory layout is sequential for all its items.
-		// The effect is that we can simply pass a pointer to the struct and it translates perfectly to a glm::vec3/2 array which
-		// again translates to 3/2 floats which translates to a byte array.
+
 		glBufferData(GL_ARRAY_BUFFER, this->vertices.size() * sizeof(Vertex), &this->vertices[0], GL_STATIC_DRAW);
 
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, this->EBO);
 		glBufferData(GL_ELEMENT_ARRAY_BUFFER, this->indices.size() * sizeof(GLuint), &this->indices[0], GL_STATIC_DRAW);
 
 		// Set the vertex attribute pointers
-		// Vertex Positions
+		// Vertex Positions (Location 0)
 		glEnableVertexAttribArray(0);
-		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (GLvoid *)0);
-		// Vertex Normals
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (GLvoid*)0);
+		// Vertex Normals (Location 1)
 		glEnableVertexAttribArray(1);
-		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (GLvoid *)offsetof(Vertex, Normal));
-		// Vertex Texture Coords
+		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (GLvoid*)offsetof(Vertex, Normal));
+		// Vertex Texture Coords (Location 2)
 		glEnableVertexAttribArray(2);
-		glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (GLvoid *)offsetof(Vertex, TexCoords));
+		glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (GLvoid*)offsetof(Vertex, TexCoords));
+
+		// NUEVO: IDs de Huesos (Location 3 en tu Vertex Shader)
+		// IMPORTANTE: Se usa glVertexAttribIPointer (con 'I' de Integer) porque pasamos IDs de tipo entero
+		glEnableVertexAttribArray(3);
+		glVertexAttribIPointer(3, 4, GL_INT, sizeof(Vertex), (GLvoid*)offsetof(Vertex, m_BoneIDs));
+
+		// NUEVO: Pesos de Huesos (Location 4 en tu Vertex Shader)
+		glEnableVertexAttribArray(4);
+		glVertexAttribPointer(4, 4, GL_FLOAT, GL_FALSE, sizeof(Vertex), (GLvoid*)offsetof(Vertex, m_Weights));
 
 		glBindVertexArray(0);
 	}
