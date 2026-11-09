@@ -35,7 +35,7 @@ void MouseCallback(GLFWwindow* window, double xPos, double yPos);
 void DoMovement();
 
 // Window dimensions
-const GLuint WIDTH = 800, HEIGHT = 600;
+const GLuint WIDTH = 1600, HEIGHT = 900;
 int SCREEN_WIDTH, SCREEN_HEIGHT;
 
 // Camera
@@ -170,7 +170,7 @@ int main()
 	Model Ciu((char*)"Models/Residential Buildings 001.obj");
 	//Model Road((char*)"Models/road.obj");
 	Model Ciu2((char*)"Models/Residential Buildings 002.obj");
-	//Model arb((char*)"Models/arbol.obj");
+	Model arb((char*)"Models/arbol.obj");
 	Model Mue((char*)"Models/muelle.obj");
 	Model Mue1((char*)"Models/muelle1.obj");
 	Model Tor((char*)"Models/torii.obj");
@@ -389,13 +389,24 @@ int main()
 		//glUniformMatrix4fv(glGetUniformLocation(lightingShader.Program, "model"), 1, GL_FALSE, glm::value_ptr(model));
 		//Ciu2.Draw(lightingShader);
 
-		//// 7. Arbol
-		//model = glm::mat4(1.0f);
-		//model = glm::translate(model, glm::vec3(4.0f, -0.7f, -3.0f)); // sobre el suelo, a un lado del perro
-		//model = glm::scale(model, glm::vec3(2.0f));                    // ~3.8 de alto
-		//glUniformMatrix4fv(glGetUniformLocation(lightingShader.Program, "model"), 1, GL_FALSE, glm::value_ptr(model));
-		//glUniform1i(glGetUniformLocation(lightingShader.Program, "transparency"), 0); // ver nota
+
+		// 7. Arbol Izquierdo
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(-45.0f, -3.5f, -60.0f));
+		model = glm::scale(model, glm::vec3(4.0f, 4.0f, 4.0f));
+		glUniformMatrix4fv(glGetUniformLocation(lightingShader.Program, "model"), 1, GL_FALSE, glm::value_ptr(model));
+		glUniform1i(glGetUniformLocation(lightingShader.Program, "transparency"), 0);
+		arb.Draw(lightingShader);
+
+
+		// 7.1 Arbol Derecho
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(56.0f, -10.0f, -70.0f));
+		model = glm::scale(model, glm::vec3(5.0f, 5.0f, 5.0f));
+		glUniformMatrix4fv(glGetUniformLocation(lightingShader.Program, "model"), 1, GL_FALSE, glm::value_ptr(model));
+		glUniform1i(glGetUniformLocation(lightingShader.Program, "transparency"), 0);
 		//arb.Draw(lightingShader);
+
 
 		// 8. Muelle Izquierdo 1
 		model = glm::mat4(1.0f);
