@@ -389,7 +389,6 @@ int main()
 		//glUniformMatrix4fv(glGetUniformLocation(lightingShader.Program, "model"), 1, GL_FALSE, glm::value_ptr(model));
 		//Ciu2.Draw(lightingShader);
 
-
 		// 7. Arbol Izquierdo
 		model = glm::mat4(1.0f);
 		model = glm::translate(model, glm::vec3(-45.0f, -3.5f, -60.0f));
@@ -398,14 +397,13 @@ int main()
 		glUniform1i(glGetUniformLocation(lightingShader.Program, "transparency"), 0);
 		arb.Draw(lightingShader);
 
-
 		// 7.1 Arbol Derecho
 		model = glm::mat4(1.0f);
-		model = glm::translate(model, glm::vec3(56.0f, -10.0f, -70.0f));
-		model = glm::scale(model, glm::vec3(5.0f, 5.0f, 5.0f));
+		model = glm::translate(model, glm::vec3(45.0f, -3.5f, -60.0f));
+		model = glm::scale(model, glm::vec3(4.0f, 4.0f, 4.0f));
 		glUniformMatrix4fv(glGetUniformLocation(lightingShader.Program, "model"), 1, GL_FALSE, glm::value_ptr(model));
 		glUniform1i(glGetUniformLocation(lightingShader.Program, "transparency"), 0);
-		//arb.Draw(lightingShader);
+		arb.Draw(lightingShader);
 
 
 		// 8. Muelle Izquierdo 1
