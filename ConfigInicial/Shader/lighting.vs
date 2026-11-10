@@ -9,7 +9,7 @@ out vec3 Normal;
 out vec3 FragPos;
 out vec2 TexCoords;
 
-const int MAX_BONES = 100;
+const int MAX_BONES = 150;
 const int MAX_BONE_INFLUENCE = 4;
 uniform mat4 finalBoneMatrices[MAX_BONES];
 

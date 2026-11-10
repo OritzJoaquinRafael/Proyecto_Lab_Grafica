@@ -256,6 +256,12 @@ int main()
     Model Muj2((char*)"Models/mujer2.fbx", "mujer2.png");
     Model Agu((char*)"Models/agua.obj");
     Model Gor((char*)"Models/gorin.obj");
+    Model HomS((char*)"Models/homsal.fbx", "hombre.png");
+    Model HomB((char*)"Models/hombor.fbx", "hombre1.png");
+    Model MujS((char*)"Models/mujsal.fbx", "mujer1.png");
+    Model Hom2((char*)"Models/hombre2.fbx", "hombre2.png");
+
+
 
     // Model VAO/VBO
     GLuint VBO, VAO;
@@ -430,19 +436,19 @@ int main()
 
         glm::mat4 model = glm::mat4(1.0f);
 
-        // 3. DIBUJAR CIUDAD
-        model = glm::mat4(1.0f);
-        model = glm::translate(model, glm::vec3(-79.5f, 5.0f, -0.8f));
-        model = glm::scale(model, glm::vec3(1.5f, 1.5f, 1.5f));
-        glUniformMatrix4fv(glGetUniformLocation(lightingShader.Program, "model"), 1, GL_FALSE, glm::value_ptr(model));
-        Ciu.Draw(lightingShader);
+        //// 3. DIBUJAR CIUDAD
+        //model = glm::mat4(1.0f);
+        //model = glm::translate(model, glm::vec3(-79.5f, 5.0f, -0.8f));
+        //model = glm::scale(model, glm::vec3(1.5f, 1.5f, 1.5f));
+        //glUniformMatrix4fv(glGetUniformLocation(lightingShader.Program, "model"), 1, GL_FALSE, glm::value_ptr(model));
+        //Ciu.Draw(lightingShader);
 
-        // 5. DIBUJAR TERCERA CIUDAD
-        model = glm::mat4(1.0f);
-        model = glm::translate(model, glm::vec3(-79.5f, 5.0f, -38.0f));
-        model = glm::scale(model, glm::vec3(1.5f, 1.5f, 1.5f));
-        glUniformMatrix4fv(glGetUniformLocation(lightingShader.Program, "model"), 1, GL_FALSE, glm::value_ptr(model));
-        Ciu2.Draw(lightingShader);
+        //// 5. DIBUJAR TERCERA CIUDAD
+        //model = glm::mat4(1.0f);
+        //model = glm::translate(model, glm::vec3(-79.5f, 5.0f, -38.0f));
+        //model = glm::scale(model, glm::vec3(1.5f, 1.5f, 1.5f));
+        //glUniformMatrix4fv(glGetUniformLocation(lightingShader.Program, "model"), 1, GL_FALSE, glm::value_ptr(model));
+        //Ciu2.Draw(lightingShader);
 
         // 7. Arbol Izquierdo
         model = glm::mat4(1.0f);
@@ -535,8 +541,32 @@ int main()
 
         // 12. Gorin
         model = glm::mat4(1.0f);
-        model = glm::translate(model, glm::vec3(-40.0f, -10.0f, -30.0f));
-        model = glm::scale(model, glm::vec3(10.0f, 10.0f, 10.0f));
+        model = glm::translate(model, glm::vec3(-45.0f, -3.6f, -32.0f));
+        model = glm::scale(model, glm::vec3(3.0f, 3.0f, 3.0f));
+        glUniformMatrix4fv(glGetUniformLocation(lightingShader.Program, "model"), 1, GL_FALSE, glm::value_ptr(model));
+        glUniform1i(glGetUniformLocation(lightingShader.Program, "transparency"), 0);
+        Gor.Draw(lightingShader);
+
+        // 12.1 Gorin
+        model = glm::mat4(1.0f);
+        model = glm::translate(model, glm::vec3(45.0f, -3.6f, -32.0f));
+        model = glm::scale(model, glm::vec3(3.0f, 3.0f, 3.0f));
+        glUniformMatrix4fv(glGetUniformLocation(lightingShader.Program, "model"), 1, GL_FALSE, glm::value_ptr(model));
+        glUniform1i(glGetUniformLocation(lightingShader.Program, "transparency"), 0);
+        Gor.Draw(lightingShader);
+
+        // 12.2 Gorin
+        model = glm::mat4(1.0f);
+        model = glm::translate(model, glm::vec3(-45.0f, -3.6f, -86.4f));
+        model = glm::scale(model, glm::vec3(3.0f, 3.0f, 3.0f));
+        glUniformMatrix4fv(glGetUniformLocation(lightingShader.Program, "model"), 1, GL_FALSE, glm::value_ptr(model));
+        glUniform1i(glGetUniformLocation(lightingShader.Program, "transparency"), 0);
+        Gor.Draw(lightingShader);
+
+        // 12.3 Gorin
+        model = glm::mat4(1.0f);
+        model = glm::translate(model, glm::vec3(45.0f, -3.6f, -86.4f));
+        model = glm::scale(model, glm::vec3(3.0f, 3.0f, 3.0f));
         glUniformMatrix4fv(glGetUniformLocation(lightingShader.Program, "model"), 1, GL_FALSE, glm::value_ptr(model));
         glUniform1i(glGetUniformLocation(lightingShader.Program, "transparency"), 0);
         Gor.Draw(lightingShader);
@@ -624,6 +654,29 @@ int main()
         glUniformMatrix4fv(glGetUniformLocation(lightingShader.Program, "model"), 1, GL_FALSE, glm::value_ptr(modelAnim));
         Muj1.Draw(lightingShader);
 
+        // 15. Caminar Hombre2
+        Hom2.UpdateAnimation(deltaTime, Hom2.GetScenePointer());
+
+        // 2. Obtener las matrices de los huesos transformados
+        transforms = Hom2.GetFinalBoneMatrices();
+
+        // 3. Enviar las matrices de los huesos al shader
+        for (GLuint i = 0; i < transforms.size(); i++) {
+            // Corrección de la concatenación de strings para el uniforme
+            std::string uniformName = "finalBoneMatrices[" + std::to_string(i) + "]";
+            glUniformMatrix4fv(glGetUniformLocation(lightingShader.Program, uniformName.c_str()), 1, GL_FALSE, glm::value_ptr(transforms[i]));
+        }
+        // 4. Configurar la matriz de transformación del modelo (Posición, Rotación, Escala)
+        modelAnim = glm::mat4(1.0f);
+        // Recuerda cambiar 'mujPos_Z' y 'rotacionMuj' por las variables de posición/rotación del hombre si las tienes
+        modelAnim = glm::translate(modelAnim, glm::vec3(30.0f, -7.8f, -20.0f + mujPos_Z));
+        //modelAnim = glm::rotate(modelAnim, glm::radians(rotacionHom), glm::vec3(0.0f, 1.0f, 0.0f));
+        modelAnim = glm::scale(modelAnim, glm::vec3(2.0f, 2.0f, 2.0f));
+        // 5. Enviar la matriz del modelo al shader y dibujar
+        glUniformMatrix4fv(glGetUniformLocation(lightingShader.Program, "model"), 1, GL_FALSE, glm::value_ptr(modelAnim));
+        Hom2.Draw(lightingShader);
+
+
         // 15. Caminar Mujer2
         Muj2.UpdateAnimation(deltaTime, Muj2.GetScenePointer());
         transforms = Muj2.GetFinalBoneMatrices();
@@ -638,6 +691,60 @@ int main()
         modelAnim = glm::scale(modelAnim, glm::vec3(2.0f, 2.0f, 2.0f));
         glUniformMatrix4fv(glGetUniformLocation(lightingShader.Program, "model"), 1, GL_FALSE, glm::value_ptr(modelAnim));
         Muj2.Draw(lightingShader);
+
+        // 16. Animación del Nuevo Personaje
+        HomS.UpdateAnimation(deltaTime, HomS.GetScenePointer());
+        std::vector<glm::mat4> transformsNuevo = HomS.GetFinalBoneMatrices();
+        // Mandar las matrices de los huesos al shader
+        for (GLuint i = 0; i < transformsNuevo.size(); i++)
+        {
+            std::string uniformName = "finalBoneMatrices[" + std::to_string(i) + "]";
+            glUniformMatrix4fv(glGetUniformLocation(lightingShader.Program, uniformName.c_str()), 1, GL_FALSE, glm::value_ptr(transformsNuevo[i]));
+        }
+        // Configurar posición, rotación y escala
+        glm::mat4 modelNuevo = glm::mat4(1.0f);
+        modelNuevo = glm::translate(modelNuevo, glm::vec3(5.0f, -5.0f, -62.0f)); // Ajusta X, Y, Z
+        // modelNuevo = glm::rotate(modelNuevo, glm::radians(45.0f), glm::vec3(0.0f, 1.0f, 0.0f)); // Gíralo si hace falta
+        modelNuevo = glm::scale(modelNuevo, glm::vec3(2.0f, 2.0f, 2.0f)); // Ajusta el tamaño
+        glUniformMatrix4fv(glGetUniformLocation(lightingShader.Program, "model"), 1, GL_FALSE, glm::value_ptr(modelNuevo));
+        // Dibujarlo
+        HomS.Draw(lightingShader);
+
+
+        HomB.UpdateAnimation(deltaTime, HomB.GetScenePointer());
+        std::vector<glm::mat4> transformsHomB = HomB.GetFinalBoneMatrices();
+        // Mandar las matrices de los huesos al shader
+        for (GLuint i = 0; i < transformsHomB.size(); i++)
+        {
+            std::string uniformName = "finalBoneMatrices[" + std::to_string(i) + "]";
+            glUniformMatrix4fv(glGetUniformLocation(lightingShader.Program, uniformName.c_str()), 1, GL_FALSE, glm::value_ptr(transformsHomB[i]));
+        }
+        // Configurar posición, rotación y escala
+        glm::mat4 modelHomB = glm::mat4(1.0f);
+        modelHomB = glm::translate(modelHomB, glm::vec3(15.0f, -5.0f, -62.0f)); // Ajusta X, Y, Z
+        modelHomB = glm::scale(modelHomB, glm::vec3(2.0f, 2.0f, 2.0f)); // Ajusta el tamaño
+        glUniformMatrix4fv(glGetUniformLocation(lightingShader.Program, "model"), 1, GL_FALSE, glm::value_ptr(modelHomB));
+        // Dibujarlo
+        HomB.Draw(lightingShader);
+
+
+        // 16. Mujer Saludando
+        MujS.UpdateAnimation(deltaTime, MujS.GetScenePointer());
+        std::vector<glm::mat4> transformsMujS = MujS.GetFinalBoneMatrices();
+        // Mandar las matrices de los huesos al shader
+        for (GLuint i = 0; i < transformsMujS.size(); i++)
+        {
+            std::string uniformName = "finalBoneMatrices[" + std::to_string(i) + "]";
+            glUniformMatrix4fv(glGetUniformLocation(lightingShader.Program, uniformName.c_str()), 1, GL_FALSE, glm::value_ptr(transformsMujS[i]));
+        }
+        // Configurar posición, rotación y escala
+        glm::mat4 modelMujS = glm::mat4(1.0f);
+        modelMujS = glm::translate(modelMujS, glm::vec3(10.0f, -5.0f, -62.0f)); // Ajusta X, Y, Z
+        // modelNuevo = glm::rotate(modelNuevo, glm::radians(45.0f), glm::vec3(0.0f, 1.0f, 0.0f)); // Gíralo si hace falta
+        modelMujS = glm::scale(modelMujS, glm::vec3(2.0f, 2.0f, 2.0f)); // Ajusta el tamaño
+        glUniformMatrix4fv(glGetUniformLocation(lightingShader.Program, "model"), 1, GL_FALSE, glm::value_ptr(modelMujS));
+        // Dibujarlo
+        MujS.Draw(lightingShader);
 
         glBindVertexArray(0);
 
