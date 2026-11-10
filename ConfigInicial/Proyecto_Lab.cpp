@@ -1,7 +1,7 @@
 // Proyecto 
 // Ortiz Valles Joaquin Rafael y Juárez Osorio Josue Alexis
 // Fecha de entrega: 11/11/2026
-// Código unificado: Animación de recorrido + Skybox
+// Código unificado: Animación de recorrido + Skybox + Gestos
 
 #include <iostream>
 #include <cmath>
@@ -55,18 +55,28 @@ float movelightPos = 0.0f;
 // --- SKYBOX TINT ---
 const glm::vec3 SKY_TINT(1.0f, 1.0f, 1.0f);
 
-// Variables globales para el recorrido de las mujeres (Del Código 1)
+// Variables globales para el recorrido GRUPAL (Muj1, Muj2, Hom2)
 float mujPos_Z = 0.0f;
 const float VELOCIDAD_MUJ = 1.5f;
-const float DISTANCIA_MUJ = 25.0f;
-const float TIEMPO_PAUSA_MUJ = 0.25f;
+const float DISTANCIA_MUJ = 40.0f; // Tomado del código de tu compañero
 const float DURACION_GIRO_MUJ = 0.8f;
 bool mujRegresando = false;
 bool mujGirando = false;
 float tiempoGiroMuj = 0.0f;
-float rotacionMuj = 0.0f;
-float rotacionInicialMuj = 0.0f;
-float rotacionFinalMuj = 0.0f;
+float anguloMuj = 0.0f;
+float anguloInicialMuj = 0.0f;
+float anguloFinalMuj = 0.0f;
+
+// Recorrido independiente de la MUJER QUE ESTÁ SOLA (Muj)
+float mujSoloPos_Z = 0.0f;
+const float DISTANCIA_MUJ_SOLO = 68.0f;
+int estadoMujSolo = 0; // 0: camina, 1: gira al agua, 2: señala, 3: gira, 4: regresa, 5: gira al inicio
+float tiempoGiroMujSolo = 0.0f;
+float tiempoDetenidaMujSolo = 0.0f;
+float anguloMujSolo = 0.0f;
+float anguloInicialMujSolo = 0.0f;
+float anguloFinalMujSolo = 90.0f;
+float gestoMujSolo = 0.0f;
 
 // Positions of the point lights
 glm::vec3 pointLightPositions[] = {
@@ -123,7 +133,6 @@ float vertices[] = {
 
 // --- SKYBOX VERTICES ---
 GLfloat skyboxVertices[] = {
-    // Positions          
     -1.0f,  1.0f, -1.0f,
     -1.0f, -1.0f, -1.0f,
      1.0f, -1.0f, -1.0f,
@@ -199,6 +208,103 @@ GLuint loadCubemap(std::vector<std::string> faces)
     return textureID;
 }
 
+// =======================================================================
+// FUNCIONES DE CINEMÁTICA Y GESTOS (Del código de tu compañero)
+// =======================================================================
+static glm::mat4 MatrizAssimp(const aiMatrix4x4& matriz)
+{
+    glm::mat4 resultado(1.0f);
+    for (int fila = 0; fila < 4; fila++)
+        for (int columna = 0; columna < 4; columna++)
+            resultado[fila][columna] = matriz[columna][fila];
+    return resultado;
+}
+
+static bool PosicionHueso(Model& personaje, const std::vector<glm::mat4>& matrices,
+    const std::string& nombre, glm::vec3& posicion)
+{
+    auto& mapa = personaje.GetBoneInfoMap();
+    auto it = mapa.find(nombre);
+    if (it == mapa.end() || it->second < 0 || it->second >= (int)matrices.size())
+        return false;
+
+    const aiScene* escena = personaje.GetScenePointer();
+    if (!escena)
+        return false;
+
+    for (unsigned int i = 0; i < escena->mNumMeshes; i++)
+    {
+        const aiMesh* malla = escena->mMeshes[i];
+        for (unsigned int j = 0; j < malla->mNumBones; j++)
+        {
+            const aiBone* hueso = malla->mBones[j];
+            if (nombre == hueso->mName.C_Str())
+            {
+                glm::mat4 matrizHueso = matrices[it->second] * glm::inverse(MatrizAssimp(hueso->mOffsetMatrix));
+                posicion = glm::vec3(matrizHueso[3]);
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+static glm::mat4 OrientarSegmento(const glm::vec3& pivote, const glm::vec3& extremo, const glm::vec3& direccion, float intensidad)
+{
+    glm::vec3 original = extremo - pivote;
+    if (glm::length(original) < 0.0001f)
+        return glm::mat4(1.0f);
+
+    original = glm::normalize(original);
+    glm::vec3 destino = glm::normalize(direccion);
+    float producto = glm::clamp(glm::dot(original, destino), -1.0f, 1.0f);
+    glm::vec3 eje = glm::cross(original, destino);
+
+    if (glm::length(eje) < 0.0001f)
+    {
+        eje = glm::cross(original, glm::vec3(0.0f, 1.0f, 0.0f));
+        if (glm::length(eje) < 0.0001f)
+            eje = glm::cross(original, glm::vec3(1.0f, 0.0f, 0.0f));
+    }
+    eje = glm::normalize(eje);
+
+    glm::mat4 matriz(1.0f);
+    matriz = glm::translate(matriz, pivote);
+    matriz = glm::rotate(matriz, std::acos(producto) * intensidad, eje);
+    matriz = glm::translate(matriz, -pivote);
+    return matriz;
+}
+
+static void AplicarGestoBrazo(Model& personaje, std::vector<glm::mat4>& matrices, float intensidad)
+{
+    if (intensidad <= 0.0f) return;
+
+    glm::vec3 hombro, codo, mano;
+    if (!PosicionHueso(personaje, matrices, "mixamorig:RightArm", hombro) ||
+        !PosicionHueso(personaje, matrices, "mixamorig:RightForeArm", codo) ||
+        !PosicionHueso(personaje, matrices, "mixamorig:RightHand", mano))
+        return;
+
+    glm::vec3 direccion(0.0f, -0.05f, 1.0f);
+    glm::mat4 brazo = OrientarSegmento(hombro, codo, direccion, intensidad);
+    glm::vec3 codoGirado = glm::vec3(brazo * glm::vec4(codo, 1.0f));
+    glm::vec3 manoGirada = glm::vec3(brazo * glm::vec4(mano, 1.0f));
+    glm::mat4 antebrazo = OrientarSegmento(codoGirado, manoGirada, direccion, intensidad);
+
+    for (const auto& hueso : personaje.GetBoneInfoMap())
+    {
+        const std::string& nombre = hueso.first;
+        int indice = hueso.second;
+        if (indice < 0 || indice >= (int)matrices.size()) continue;
+
+        if (nombre == "mixamorig:RightArm")
+            matrices[indice] = brazo * matrices[indice];
+        else if (nombre == "mixamorig:RightForeArm" || nombre.find("mixamorig:RightHand") == 0)
+            matrices[indice] = antebrazo * brazo * matrices[indice];
+    }
+}
+// =======================================================================
+
 glm::vec3 Light1 = glm::vec3(0);
 
 // Deltatime
@@ -241,9 +347,7 @@ int main()
     Shader skyboxShader("Shader/SkyBox.vs", "Shader/SkyBox.frag");
 
     // Load Models
-    //Model Luna((char*)"Models/moon.obj");
     Model Ciu((char*)"Models/Residential Buildings 001.obj");
-    //Model Road((char*)"Models/road.obj");
     Model Ciu2((char*)"Models/Residential Buildings 002.obj");
     Model arb((char*)"Models/arbol.obj");
     Model Mue((char*)"Models/muelle.obj");
@@ -260,8 +364,6 @@ int main()
     Model HomB((char*)"Models/hombor.fbx", "hombre1.png");
     Model MujS((char*)"Models/mujsal.fbx", "mujer1.png");
     Model Hom2((char*)"Models/hombre2.fbx", "hombre2.png");
-
-
 
     // Model VAO/VBO
     GLuint VBO, VAO;
@@ -298,7 +400,6 @@ int main()
     faces.push_back("Skybox/front.jpg");
     GLuint cubemapTexture = loadCubemap(faces);
 
-    // Textures configuration
     lightingShader.Use();
     glUniform1i(glGetUniformLocation(lightingShader.Program, "Material.difuse"), 0);
     glUniform1i(glGetUniformLocation(lightingShader.Program, "Material.specular"), 1);
@@ -318,7 +419,7 @@ int main()
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        // --- SKYBOX (Se dibuja al fondo) ---
+        // --- SKYBOX (Se dibuja al fondo, preservando tu orden original para la transparencia del agua) ---
         glDisable(GL_DEPTH_TEST);
         skyboxShader.Use();
         glm::mat4 skyView = glm::mat4(glm::mat3(camera.GetViewMatrix()));
@@ -333,7 +434,6 @@ int main()
         glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
         glBindVertexArray(0);
 
-        // OpenGL options
         glEnable(GL_DEPTH_TEST);
 
         lightingShader.Use();
@@ -366,7 +466,7 @@ int main()
         glUniform3f(glGetUniformLocation(lightingShader.Program, "dirLight.diffuse"), 0.15f + lightColor.x, 0.2f + lightColor.y, 0.35f + lightColor.z);
         glUniform3f(glGetUniformLocation(lightingShader.Program, "dirLight.specular"), 0.2f, 0.2f, 0.4f);
 
-        // Point light 0 (Ciudad 1 - Letrero Neón Cian)
+        // Luces Point...
         glUniform3f(glGetUniformLocation(lightingShader.Program, "pointLights[0].position"), pointLightPositions[0].x, pointLightPositions[0].y, pointLightPositions[0].z);
         glUniform3f(glGetUniformLocation(lightingShader.Program, "pointLights[0].ambient"), 0.0f, 0.05f, 0.05f);
         glUniform3f(glGetUniformLocation(lightingShader.Program, "pointLights[0].diffuse"), 0.0f, 0.8f, 1.0f);
@@ -375,7 +475,6 @@ int main()
         glUniform1f(glGetUniformLocation(lightingShader.Program, "pointLights[0].linear"), 0.045f);
         glUniform1f(glGetUniformLocation(lightingShader.Program, "pointLights[0].quadratic"), 0.0075f);
 
-        // Point light 1 (Ciudad 2 - Naranja Cálido)
         glUniform3f(glGetUniformLocation(lightingShader.Program, "pointLights[1].position"), pointLightPositions[1].x, pointLightPositions[1].y, pointLightPositions[1].z);
         glUniform3f(glGetUniformLocation(lightingShader.Program, "pointLights[1].ambient"), 0.05f, 0.02f, 0.0f);
         glUniform3f(glGetUniformLocation(lightingShader.Program, "pointLights[1].diffuse"), 1.0f, 0.6f, 0.1f);
@@ -384,7 +483,6 @@ int main()
         glUniform1f(glGetUniformLocation(lightingShader.Program, "pointLights[1].linear"), 0.045f);
         glUniform1f(glGetUniformLocation(lightingShader.Program, "pointLights[1].quadratic"), 0.0075f);
 
-        // Point light 2 (Ciudad 3 - Blanco Frío Fluorescente)
         glUniform3f(glGetUniformLocation(lightingShader.Program, "pointLights[2].position"), pointLightPositions[2].x, pointLightPositions[2].y, pointLightPositions[2].z);
         glUniform3f(glGetUniformLocation(lightingShader.Program, "pointLights[2].ambient"), 0.02f, 0.02f, 0.02f);
         glUniform3f(glGetUniformLocation(lightingShader.Program, "pointLights[2].diffuse"), 0.8f, 0.9f, 1.0f);
@@ -393,7 +491,6 @@ int main()
         glUniform1f(glGetUniformLocation(lightingShader.Program, "pointLights[2].linear"), 0.045f);
         glUniform1f(glGetUniformLocation(lightingShader.Program, "pointLights[2].quadratic"), 0.0075f);
 
-        // Point light 3 (Ciudad 4 - Neón Magenta)
         glUniform3f(glGetUniformLocation(lightingShader.Program, "pointLights[3].position"), pointLightPositions[3].x, pointLightPositions[3].y, pointLightPositions[3].z);
         glUniform3f(glGetUniformLocation(lightingShader.Program, "pointLights[3].ambient"), 0.05f, 0.0f, 0.05f);
         glUniform3f(glGetUniformLocation(lightingShader.Program, "pointLights[3].diffuse"), 0.8f, 0.2f, 1.0f);
@@ -402,7 +499,6 @@ int main()
         glUniform1f(glGetUniformLocation(lightingShader.Program, "pointLights[3].linear"), 0.045f);
         glUniform1f(glGetUniformLocation(lightingShader.Program, "pointLights[3].quadratic"), 0.0075f);
 
-        // Point light 4 (Farol blanco)
         glUniform3f(glGetUniformLocation(lightingShader.Program, "pointLights[4].position"), pointLightPositions[4].x, pointLightPositions[4].y, pointLightPositions[4].z);
         glUniform3f(glGetUniformLocation(lightingShader.Program, "pointLights[4].ambient"), 0.1f, 0.1f, 0.1f);
         glUniform3f(glGetUniformLocation(lightingShader.Program, "pointLights[4].diffuse"), 0.9f, 0.9f, 0.8f);
@@ -435,20 +531,6 @@ int main()
         glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projection));
 
         glm::mat4 model = glm::mat4(1.0f);
-
-        //// 3. DIBUJAR CIUDAD
-        //model = glm::mat4(1.0f);
-        //model = glm::translate(model, glm::vec3(-79.5f, 5.0f, -0.8f));
-        //model = glm::scale(model, glm::vec3(1.5f, 1.5f, 1.5f));
-        //glUniformMatrix4fv(glGetUniformLocation(lightingShader.Program, "model"), 1, GL_FALSE, glm::value_ptr(model));
-        //Ciu.Draw(lightingShader);
-
-        //// 5. DIBUJAR TERCERA CIUDAD
-        //model = glm::mat4(1.0f);
-        //model = glm::translate(model, glm::vec3(-79.5f, 5.0f, -38.0f));
-        //model = glm::scale(model, glm::vec3(1.5f, 1.5f, 1.5f));
-        //glUniformMatrix4fv(glGetUniformLocation(lightingShader.Program, "model"), 1, GL_FALSE, glm::value_ptr(model));
-        //Ciu2.Draw(lightingShader);
 
         // 7. Arbol Izquierdo
         model = glm::mat4(1.0f);
@@ -539,7 +621,7 @@ int main()
         Agu.Draw(lightingShader);
         glDisable(GL_BLEND);
 
-        // 12. Gorin
+        // 12.0 Gorin - Multiples instancias tuyas
         model = glm::mat4(1.0f);
         model = glm::translate(model, glm::vec3(-45.0f, -3.6f, -32.0f));
         model = glm::scale(model, glm::vec3(3.0f, 3.0f, 3.0f));
@@ -547,101 +629,185 @@ int main()
         glUniform1i(glGetUniformLocation(lightingShader.Program, "transparency"), 0);
         Gor.Draw(lightingShader);
 
-        // 12.1 Gorin
         model = glm::mat4(1.0f);
         model = glm::translate(model, glm::vec3(45.0f, -3.6f, -32.0f));
         model = glm::scale(model, glm::vec3(3.0f, 3.0f, 3.0f));
         glUniformMatrix4fv(glGetUniformLocation(lightingShader.Program, "model"), 1, GL_FALSE, glm::value_ptr(model));
-        glUniform1i(glGetUniformLocation(lightingShader.Program, "transparency"), 0);
         Gor.Draw(lightingShader);
 
-        // 12.2 Gorin
         model = glm::mat4(1.0f);
         model = glm::translate(model, glm::vec3(-45.0f, -3.6f, -86.4f));
         model = glm::scale(model, glm::vec3(3.0f, 3.0f, 3.0f));
         glUniformMatrix4fv(glGetUniformLocation(lightingShader.Program, "model"), 1, GL_FALSE, glm::value_ptr(model));
-        glUniform1i(glGetUniformLocation(lightingShader.Program, "transparency"), 0);
         Gor.Draw(lightingShader);
 
-        // 12.3 Gorin
         model = glm::mat4(1.0f);
         model = glm::translate(model, glm::vec3(45.0f, -3.6f, -86.4f));
         model = glm::scale(model, glm::vec3(3.0f, 3.0f, 3.0f));
         glUniformMatrix4fv(glGetUniformLocation(lightingShader.Program, "model"), 1, GL_FALSE, glm::value_ptr(model));
-        glUniform1i(glGetUniformLocation(lightingShader.Program, "transparency"), 0);
         Gor.Draw(lightingShader);
 
-        // --- Recorrido de ida y vuelta de las tres mujeres (Lógica Código 1) ---
-        if (mujGirando)
-        {
-            tiempoGiroMuj += deltaTime;
 
-            if (tiempoGiroMuj <= TIEMPO_PAUSA_MUJ)
+        // ======================================================================================
+        // RECORRIDO DEL GRUPO (Muj1, Muj2 y Hom2)
+        // ======================================================================================
+        if (!mujGirando)
+        {
+            if (!mujRegresando)
             {
-                rotacionMuj = rotacionInicialMuj;
+                mujPos_Z += VELOCIDAD_MUJ * deltaTime;
+
+                if (mujPos_Z >= DISTANCIA_MUJ)
+                {
+                    mujPos_Z = DISTANCIA_MUJ;
+                    mujGirando = true;
+                    tiempoGiroMuj = 0.0f;
+                    anguloInicialMuj = anguloMuj;
+                    anguloFinalMuj = 180.0f;
+                }
             }
             else
             {
-                float progresoGiro = (tiempoGiroMuj - TIEMPO_PAUSA_MUJ) / DURACION_GIRO_MUJ;
+                mujPos_Z -= VELOCIDAD_MUJ * deltaTime;
 
-                if (progresoGiro > 1.0f)
-                    progresoGiro = 1.0f;
-
-                rotacionMuj = rotacionInicialMuj + (rotacionFinalMuj - rotacionInicialMuj) * progresoGiro;
-
-                if (progresoGiro >= 1.0f)
+                if (mujPos_Z <= 0.0f)
                 {
-                    rotacionMuj = rotacionFinalMuj;
-                    mujGirando = false;
-                    mujRegresando = !mujRegresando;
+                    mujPos_Z = 0.0f;
+                    mujGirando = true;
+                    tiempoGiroMuj = 0.0f;
+                    anguloInicialMuj = anguloMuj;
+                    anguloFinalMuj = 0.0f;
                 }
             }
         }
-        else if (!mujRegresando)
+        if (mujGirando)
         {
-            mujPos_Z += VELOCIDAD_MUJ * deltaTime;
+            tiempoGiroMuj += deltaTime;
+            float progresoGiro = glm::clamp(tiempoGiroMuj / DURACION_GIRO_MUJ, 0.0f, 1.0f);
+            anguloMuj = glm::mix(anguloInicialMuj, anguloFinalMuj, progresoGiro);
 
-            if (mujPos_Z >= DISTANCIA_MUJ)
+            if (progresoGiro >= 1.0f)
             {
-                mujPos_Z = DISTANCIA_MUJ;
-                mujGirando = true;
-                tiempoGiroMuj = 0.0f;
-                rotacionInicialMuj = rotacionMuj;
-                rotacionFinalMuj = 180.0f;
+                anguloMuj = anguloFinalMuj;
+                mujGirando = false;
+                mujRegresando = !mujRegresando;
             }
         }
+
+        // ======================================================================================
+        // RECORRIDO INDEPENDIENTE Y GESTOS DE LA MUJER QUE VA SOLA (Muj)
+        // ======================================================================================
+        if (estadoMujSolo == 0)
+        {
+            mujSoloPos_Z += VELOCIDAD_MUJ * deltaTime;
+
+            if (mujSoloPos_Z >= DISTANCIA_MUJ_SOLO)
+            {
+                mujSoloPos_Z = DISTANCIA_MUJ_SOLO;
+                estadoMujSolo = 1;
+                tiempoGiroMujSolo = 0.0f;
+                anguloInicialMujSolo = anguloMujSolo;
+                anguloFinalMujSolo = 90.0f;
+            }
+        }
+        else if (estadoMujSolo == 1)
+        {
+            tiempoGiroMujSolo += deltaTime;
+            float progresoGiroSolo = glm::clamp(tiempoGiroMujSolo / DURACION_GIRO_MUJ, 0.0f, 1.0f);
+            anguloMujSolo = glm::mix(anguloInicialMujSolo, anguloFinalMujSolo, progresoGiroSolo);
+
+            if (progresoGiroSolo >= 1.0f)
+            {
+                anguloMujSolo = anguloFinalMujSolo;
+                estadoMujSolo = 2;
+                tiempoDetenidaMujSolo = 0.0f;
+            }
+        }
+        else if (estadoMujSolo == 2)
+        {
+            if (gestoMujSolo < 1.0f)
+                gestoMujSolo = glm::min(gestoMujSolo + deltaTime / 0.8f, 1.0f);
+            else
+                tiempoDetenidaMujSolo += deltaTime;
+
+            if (tiempoDetenidaMujSolo >= 10.0f)
+            {
+                estadoMujSolo = 3;
+                tiempoGiroMujSolo = 0.0f;
+                anguloInicialMujSolo = anguloMujSolo;
+                anguloFinalMujSolo = 180.0f;
+            }
+        }
+        else if (estadoMujSolo == 3)
+        {
+            tiempoGiroMujSolo += deltaTime;
+            gestoMujSolo = glm::max(gestoMujSolo - deltaTime / DURACION_GIRO_MUJ, 0.0f);
+            float progresoGiroSolo = glm::clamp(tiempoGiroMujSolo / DURACION_GIRO_MUJ, 0.0f, 1.0f);
+            anguloMujSolo = glm::mix(anguloInicialMujSolo, anguloFinalMujSolo, progresoGiroSolo);
+
+            if (progresoGiroSolo >= 1.0f)
+            {
+                anguloMujSolo = anguloFinalMujSolo;
+                estadoMujSolo = 4;
+            }
+        }
+        else if (estadoMujSolo == 4)
+        {
+            mujSoloPos_Z -= VELOCIDAD_MUJ * deltaTime;
+
+            if (mujSoloPos_Z <= 0.0f)
+            {
+                mujSoloPos_Z = 0.0f;
+                estadoMujSolo = 5;
+                tiempoGiroMujSolo = 0.0f;
+                anguloInicialMujSolo = anguloMujSolo;
+                anguloFinalMujSolo = 0.0f;
+            }
+        }
+        else if (estadoMujSolo == 5)
+        {
+            tiempoGiroMujSolo += deltaTime;
+            float progresoGiroSolo = glm::clamp(tiempoGiroMujSolo / DURACION_GIRO_MUJ, 0.0f, 1.0f);
+            anguloMujSolo = glm::mix(anguloInicialMujSolo, anguloFinalMujSolo, progresoGiroSolo);
+
+            if (progresoGiroSolo >= 1.0f)
+            {
+                anguloMujSolo = 0.0f;
+                mujSoloPos_Z = 0.0f;
+                gestoMujSolo = 0.0f;
+                tiempoDetenidaMujSolo = 0.0f;
+                estadoMujSolo = 0;
+            }
+        }
+
+        // ======================================================================================
+        // DIBUJO DE MODELOS ANIMADOS
+        // ======================================================================================
+
+        // Mujer Sola (con gesto cinemático)
+        if (estadoMujSolo == 0 || estadoMujSolo == 4)
+            Muj.UpdateAnimation(deltaTime, Muj.GetScenePointer());
         else
-        {
-            mujPos_Z -= VELOCIDAD_MUJ * deltaTime;
+            Muj.UpdateAnimation(0.0f, Muj.GetScenePointer()); // Congelarla
 
-            if (mujPos_Z <= 0.0f)
-            {
-                mujPos_Z = 0.0f;
-                mujGirando = true;
-                tiempoGiroMuj = 0.0f;
-                rotacionInicialMuj = rotacionMuj;
-                rotacionFinalMuj = 0.0f;
-            }
-        }
-
-        // 13. Caminar Mujer
-        Muj.UpdateAnimation(deltaTime, Muj.GetScenePointer());
-        std::vector<glm::mat4> transforms = Muj.GetFinalBoneMatrices();
-        for (GLuint i = 0; i < transforms.size(); i++)
+        std::vector<glm::mat4> transformsMujSolo = Muj.GetFinalBoneMatrices();
+        AplicarGestoBrazo(Muj, transformsMujSolo, gestoMujSolo); // El código de tu compañero
+        for (GLuint i = 0; i < transformsMujSolo.size(); i++)
         {
             std::string uniformName = "finalBoneMatrices[" + std::to_string(i) + "]";
-            glUniformMatrix4fv(glGetUniformLocation(lightingShader.Program, uniformName.c_str()), 1, GL_FALSE, glm::value_ptr(transforms[i]));
+            glUniformMatrix4fv(glGetUniformLocation(lightingShader.Program, uniformName.c_str()), 1, GL_FALSE, glm::value_ptr(transformsMujSolo[i]));
         }
         glm::mat4 modelAnim = glm::mat4(1.0f);
-        modelAnim = glm::translate(modelAnim, glm::vec3(-30.0f, -7.8f, -100.0f + mujPos_Z));
-        modelAnim = glm::rotate(modelAnim, glm::radians(rotacionMuj), glm::vec3(0.0f, 1.0f, 0.0f));
+        modelAnim = glm::translate(modelAnim, glm::vec3(-30.0f, -7.8f, -100.0f + mujSoloPos_Z));
+        modelAnim = glm::rotate(modelAnim, glm::radians(anguloMujSolo), glm::vec3(0.0f, 1.0f, 0.0f));
         modelAnim = glm::scale(modelAnim, glm::vec3(2.0f, 2.0f, 2.0f));
         glUniformMatrix4fv(glGetUniformLocation(lightingShader.Program, "model"), 1, GL_FALSE, glm::value_ptr(modelAnim));
         Muj.Draw(lightingShader);
 
-        // 14. Caminar Mujer1
-        Muj1.UpdateAnimation(deltaTime, Muj1.GetScenePointer());
-        transforms = Muj1.GetFinalBoneMatrices();
+
+        // Grupo: Mujer1
+        Muj1.UpdateAnimation(mujGirando ? 0.0f : deltaTime, Muj1.GetScenePointer());
+        std::vector<glm::mat4> transforms = Muj1.GetFinalBoneMatrices();
         for (GLuint i = 0; i < transforms.size(); i++)
         {
             std::string uniformName = "finalBoneMatrices[" + std::to_string(i) + "]";
@@ -649,36 +815,13 @@ int main()
         }
         modelAnim = glm::mat4(1.0f);
         modelAnim = glm::translate(modelAnim, glm::vec3(30.0f, -7.8f, -100.0f + mujPos_Z));
-        modelAnim = glm::rotate(modelAnim, glm::radians(rotacionMuj), glm::vec3(0.0f, 1.0f, 0.0f));
+        modelAnim = glm::rotate(modelAnim, glm::radians(anguloMuj), glm::vec3(0.0f, 1.0f, 0.0f));
         modelAnim = glm::scale(modelAnim, glm::vec3(2.0f, 2.0f, 2.0f));
         glUniformMatrix4fv(glGetUniformLocation(lightingShader.Program, "model"), 1, GL_FALSE, glm::value_ptr(modelAnim));
         Muj1.Draw(lightingShader);
 
-        // 15. Caminar Hombre2
-        Hom2.UpdateAnimation(deltaTime, Hom2.GetScenePointer());
-
-        // 2. Obtener las matrices de los huesos transformados
-        transforms = Hom2.GetFinalBoneMatrices();
-
-        // 3. Enviar las matrices de los huesos al shader
-        for (GLuint i = 0; i < transforms.size(); i++) {
-            // Corrección de la concatenación de strings para el uniforme
-            std::string uniformName = "finalBoneMatrices[" + std::to_string(i) + "]";
-            glUniformMatrix4fv(glGetUniformLocation(lightingShader.Program, uniformName.c_str()), 1, GL_FALSE, glm::value_ptr(transforms[i]));
-        }
-        // 4. Configurar la matriz de transformación del modelo (Posición, Rotación, Escala)
-        modelAnim = glm::mat4(1.0f);
-        // Recuerda cambiar 'mujPos_Z' y 'rotacionMuj' por las variables de posición/rotación del hombre si las tienes
-        modelAnim = glm::translate(modelAnim, glm::vec3(30.0f, -7.8f, -20.0f + mujPos_Z));
-        //modelAnim = glm::rotate(modelAnim, glm::radians(rotacionHom), glm::vec3(0.0f, 1.0f, 0.0f));
-        modelAnim = glm::scale(modelAnim, glm::vec3(2.0f, 2.0f, 2.0f));
-        // 5. Enviar la matriz del modelo al shader y dibujar
-        glUniformMatrix4fv(glGetUniformLocation(lightingShader.Program, "model"), 1, GL_FALSE, glm::value_ptr(modelAnim));
-        Hom2.Draw(lightingShader);
-
-
-        // 15. Caminar Mujer2
-        Muj2.UpdateAnimation(deltaTime, Muj2.GetScenePointer());
+        // Grupo: Mujer2
+        Muj2.UpdateAnimation(mujGirando ? 0.0f : deltaTime, Muj2.GetScenePointer());
         transforms = Muj2.GetFinalBoneMatrices();
         for (GLuint i = 0; i < transforms.size(); i++)
         {
@@ -687,63 +830,67 @@ int main()
         }
         modelAnim = glm::mat4(1.0f);
         modelAnim = glm::translate(modelAnim, glm::vec3(37.0f, -7.8f, -100.0f + mujPos_Z));
-        modelAnim = glm::rotate(modelAnim, glm::radians(rotacionMuj), glm::vec3(0.0f, 1.0f, 0.0f));
+        modelAnim = glm::rotate(modelAnim, glm::radians(anguloMuj), glm::vec3(0.0f, 1.0f, 0.0f));
         modelAnim = glm::scale(modelAnim, glm::vec3(2.0f, 2.0f, 2.0f));
         glUniformMatrix4fv(glGetUniformLocation(lightingShader.Program, "model"), 1, GL_FALSE, glm::value_ptr(modelAnim));
         Muj2.Draw(lightingShader);
 
-        // 16. Animación del Nuevo Personaje
+        // Grupo: Hombre2
+        Hom2.UpdateAnimation(mujGirando ? 0.0f : deltaTime, Hom2.GetScenePointer());
+        transforms = Hom2.GetFinalBoneMatrices();
+        for (GLuint i = 0; i < transforms.size(); i++) {
+            std::string uniformName = "finalBoneMatrices[" + std::to_string(i) + "]";
+            glUniformMatrix4fv(glGetUniformLocation(lightingShader.Program, uniformName.c_str()), 1, GL_FALSE, glm::value_ptr(transforms[i]));
+        }
+        modelAnim = glm::mat4(1.0f);
+        modelAnim = glm::translate(modelAnim, glm::vec3(30.0f, -7.8f, -20.0f + mujPos_Z));
+        modelAnim = glm::rotate(modelAnim, glm::radians(anguloMuj), glm::vec3(0.0f, 1.0f, 0.0f)); // Agregada rotacion para que coincida con las mujeres
+        modelAnim = glm::scale(modelAnim, glm::vec3(2.0f, 2.0f, 2.0f));
+        glUniformMatrix4fv(glGetUniformLocation(lightingShader.Program, "model"), 1, GL_FALSE, glm::value_ptr(modelAnim));
+        Hom2.Draw(lightingShader);
+
+
+        // Modelos estáticos animados tuyos
+        // 16. Hombre S
         HomS.UpdateAnimation(deltaTime, HomS.GetScenePointer());
-        std::vector<glm::mat4> transformsNuevo = HomS.GetFinalBoneMatrices();
-        // Mandar las matrices de los huesos al shader
-        for (GLuint i = 0; i < transformsNuevo.size(); i++)
+        transforms = HomS.GetFinalBoneMatrices();
+        for (GLuint i = 0; i < transforms.size(); i++)
         {
             std::string uniformName = "finalBoneMatrices[" + std::to_string(i) + "]";
-            glUniformMatrix4fv(glGetUniformLocation(lightingShader.Program, uniformName.c_str()), 1, GL_FALSE, glm::value_ptr(transformsNuevo[i]));
+            glUniformMatrix4fv(glGetUniformLocation(lightingShader.Program, uniformName.c_str()), 1, GL_FALSE, glm::value_ptr(transforms[i]));
         }
-        // Configurar posición, rotación y escala
-        glm::mat4 modelNuevo = glm::mat4(1.0f);
-        modelNuevo = glm::translate(modelNuevo, glm::vec3(5.0f, -5.0f, -62.0f)); // Ajusta X, Y, Z
-        // modelNuevo = glm::rotate(modelNuevo, glm::radians(45.0f), glm::vec3(0.0f, 1.0f, 0.0f)); // Gíralo si hace falta
-        modelNuevo = glm::scale(modelNuevo, glm::vec3(2.0f, 2.0f, 2.0f)); // Ajusta el tamaño
-        glUniformMatrix4fv(glGetUniformLocation(lightingShader.Program, "model"), 1, GL_FALSE, glm::value_ptr(modelNuevo));
-        // Dibujarlo
+        modelAnim = glm::mat4(1.0f);
+        modelAnim = glm::translate(modelAnim, glm::vec3(5.0f, -5.0f, -62.0f));
+        modelAnim = glm::scale(modelAnim, glm::vec3(2.0f, 2.0f, 2.0f));
+        glUniformMatrix4fv(glGetUniformLocation(lightingShader.Program, "model"), 1, GL_FALSE, glm::value_ptr(modelAnim));
         HomS.Draw(lightingShader);
 
-
+        // 16. Hombre B
         HomB.UpdateAnimation(deltaTime, HomB.GetScenePointer());
-        std::vector<glm::mat4> transformsHomB = HomB.GetFinalBoneMatrices();
-        // Mandar las matrices de los huesos al shader
-        for (GLuint i = 0; i < transformsHomB.size(); i++)
+        transforms = HomB.GetFinalBoneMatrices();
+        for (GLuint i = 0; i < transforms.size(); i++)
         {
             std::string uniformName = "finalBoneMatrices[" + std::to_string(i) + "]";
-            glUniformMatrix4fv(glGetUniformLocation(lightingShader.Program, uniformName.c_str()), 1, GL_FALSE, glm::value_ptr(transformsHomB[i]));
+            glUniformMatrix4fv(glGetUniformLocation(lightingShader.Program, uniformName.c_str()), 1, GL_FALSE, glm::value_ptr(transforms[i]));
         }
-        // Configurar posición, rotación y escala
-        glm::mat4 modelHomB = glm::mat4(1.0f);
-        modelHomB = glm::translate(modelHomB, glm::vec3(15.0f, -5.0f, -62.0f)); // Ajusta X, Y, Z
-        modelHomB = glm::scale(modelHomB, glm::vec3(2.0f, 2.0f, 2.0f)); // Ajusta el tamaño
-        glUniformMatrix4fv(glGetUniformLocation(lightingShader.Program, "model"), 1, GL_FALSE, glm::value_ptr(modelHomB));
-        // Dibujarlo
+        modelAnim = glm::mat4(1.0f);
+        modelAnim = glm::translate(modelAnim, glm::vec3(15.0f, -5.0f, -62.0f));
+        modelAnim = glm::scale(modelAnim, glm::vec3(2.0f, 2.0f, 2.0f));
+        glUniformMatrix4fv(glGetUniformLocation(lightingShader.Program, "model"), 1, GL_FALSE, glm::value_ptr(modelAnim));
         HomB.Draw(lightingShader);
-
 
         // 16. Mujer Saludando
         MujS.UpdateAnimation(deltaTime, MujS.GetScenePointer());
-        std::vector<glm::mat4> transformsMujS = MujS.GetFinalBoneMatrices();
-        // Mandar las matrices de los huesos al shader
-        for (GLuint i = 0; i < transformsMujS.size(); i++)
+        transforms = MujS.GetFinalBoneMatrices();
+        for (GLuint i = 0; i < transforms.size(); i++)
         {
             std::string uniformName = "finalBoneMatrices[" + std::to_string(i) + "]";
-            glUniformMatrix4fv(glGetUniformLocation(lightingShader.Program, uniformName.c_str()), 1, GL_FALSE, glm::value_ptr(transformsMujS[i]));
+            glUniformMatrix4fv(glGetUniformLocation(lightingShader.Program, uniformName.c_str()), 1, GL_FALSE, glm::value_ptr(transforms[i]));
         }
-        // Configurar posición, rotación y escala
-        glm::mat4 modelMujS = glm::mat4(1.0f);
-        modelMujS = glm::translate(modelMujS, glm::vec3(10.0f, -5.0f, -62.0f)); // Ajusta X, Y, Z
-        // modelNuevo = glm::rotate(modelNuevo, glm::radians(45.0f), glm::vec3(0.0f, 1.0f, 0.0f)); // Gíralo si hace falta
-        modelMujS = glm::scale(modelMujS, glm::vec3(2.0f, 2.0f, 2.0f)); // Ajusta el tamaño
-        glUniformMatrix4fv(glGetUniformLocation(lightingShader.Program, "model"), 1, GL_FALSE, glm::value_ptr(modelMujS));
-        // Dibujarlo
+        modelAnim = glm::mat4(1.0f);
+        modelAnim = glm::translate(modelAnim, glm::vec3(10.0f, -5.0f, -62.0f));
+        modelAnim = glm::scale(modelAnim, glm::vec3(2.0f, 2.0f, 2.0f));
+        glUniformMatrix4fv(glGetUniformLocation(lightingShader.Program, "model"), 1, GL_FALSE, glm::value_ptr(modelAnim));
         MujS.Draw(lightingShader);
 
         glBindVertexArray(0);
@@ -777,7 +924,6 @@ int main()
     }
 
     glfwTerminate();
-
     return 0;
 }
 
