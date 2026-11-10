@@ -703,6 +703,7 @@ void DoMovement()
 }
 
 // Is called whenever a key is pressed/released via GLFW
+// prueba
 void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mode)
 {
     if (GLFW_KEY_ESCAPE == key && GLFW_PRESS == action)
