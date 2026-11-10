@@ -63,9 +63,9 @@ const float DURACION_GIRO_MUJ = 0.8f;
 bool mujRegresando = false;
 bool mujGirando = false;
 float tiempoGiroMuj = 0.0f;
-float anguloMuj = 0.0f;
-float anguloInicialMuj = 0.0f;
-float anguloFinalMuj = 0.0f;
+float rotacionMuj = 0.0f;
+float rotacionInicialMuj = 0.0f;
+float rotacionFinalMuj = 0.0f;
 
 // Recorrido independiente de la MUJER QUE ESTÁ SOLA (Muj)
 float mujSoloPos_Z = 0.0f;
