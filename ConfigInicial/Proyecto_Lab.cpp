@@ -693,7 +693,7 @@ int main()
         glUniform1i(glGetUniformLocation(lightingShader.Program, "transparency"), 0);
         Edi3.Draw(lightingShader);
 
-        // 10.0 Edificio Derecho 1
+        // 10.0 Edificio Derecho 1.
 
         model = glm::mat4(1.0f);
         model = glm::translate(model, glm::vec3(77.0f, 0.95f, 2.2f));
