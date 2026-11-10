@@ -1,7 +1,7 @@
 // Proyecto 
-// Ortiz Valles Joaquin Rafael y Juárez Osorio Josue Alexis
+// Ortiz Valles Joaquin Rafael y Ju?rez Osorio Josue Alexis
 // Fecha de entrega: 11/11/2026
-// Código unificado: Animación de recorrido + Skybox + Gestos
+// C?digo unificado: Animaci?n de recorrido + Skybox + Gestos
 
 #include <iostream>
 #include <cmath>
@@ -58,7 +58,7 @@ const glm::vec3 SKY_TINT(1.0f, 1.0f, 1.0f);
 // Variables globales para el recorrido GRUPAL (Muj1, Muj2, Hom2)
 float mujPos_Z = 0.0f;
 const float VELOCIDAD_MUJ = 1.5f;
-const float DISTANCIA_MUJ = 40.0f; // Tomado del código de tu compañero
+const float DISTANCIA_MUJ = 40.0f; // Tomado del c?digo de tu compa?ero
 const float DURACION_GIRO_MUJ = 0.8f;
 bool mujRegresando = false;
 bool mujGirando = false;
@@ -67,10 +67,10 @@ float anguloMuj = 0.0f;
 float anguloInicialMuj = 0.0f;
 float anguloFinalMuj = 0.0f;
 
-// Recorrido independiente de la MUJER QUE ESTÁ SOLA (Muj)
+// Recorrido independiente de la MUJER QUE EST? SOLA (Muj)
 float mujSoloPos_Z = 0.0f;
 const float DISTANCIA_MUJ_SOLO = 68.0f;
-int estadoMujSolo = 0; // 0: camina, 1: gira al agua, 2: señala, 3: gira, 4: regresa, 5: gira al inicio
+int estadoMujSolo = 0; // 0: camina, 1: gira al agua, 2: se?ala, 3: gira, 4: regresa, 5: gira al inicio
 float tiempoGiroMujSolo = 0.0f;
 float tiempoDetenidaMujSolo = 0.0f;
 float anguloMujSolo = 0.0f;
@@ -209,7 +209,7 @@ GLuint loadCubemap(std::vector<std::string> faces)
 }
 
 // =======================================================================
-// FUNCIONES DE CINEMÁTICA Y GESTOS
+// FUNCIONES DE CINEM?TICA Y GESTOS
 // =======================================================================
 static glm::mat4 MatrizAssimp(const aiMatrix4x4& matriz)
 {
@@ -304,6 +304,146 @@ static void AplicarGestoBrazo(Model& personaje, std::vector<glm::mat4>& matrices
     }
 }
 // =======================================================================
+
+const float PI_BOTES = 3.14159265359f;
+const float RADIO_RUTA_BOTES = 3.0f;
+const float Z_SUPERIOR_RUTA_BOTES = 8.0f;
+const float Z_INFERIOR_RUTA_BOTES = -128.0f;
+const float LONGITUD_TRAMO_BOTES = Z_SUPERIOR_RUTA_BOTES - Z_INFERIOR_RUTA_BOTES;
+const float LONGITUD_CURVA_BOTES = PI_BOTES * RADIO_RUTA_BOTES;
+const float LONGITUD_RUTA_BOTES = 2.0f * LONGITUD_TRAMO_BOTES + 2.0f * LONGITUD_CURVA_BOTES;
+
+enum EstadoBote
+{
+    BOTE_CORRIENTE_IZQUIERDA,
+    BOTE_CURVA_SUPERIOR,
+    BOTE_CORRIENTE_DERECHA,
+    BOTE_CURVA_INFERIOR
+};
+
+struct BoteAnimado
+{
+    glm::vec3 posicion;
+    float progreso;
+    float velocidad;
+    float anguloY;
+    float faseBalanceo;
+    float faseCorriente;
+    EstadoBote estado;
+};
+
+BoteAnimado boteIzquierdo =
+{
+    glm::vec3(-RADIO_RUTA_BOTES, -10.0f, -30.0f),
+    -30.0f - Z_INFERIOR_RUTA_BOTES,
+    2.8f, 0.0f, 0.0f, 0.0f,
+    BOTE_CORRIENTE_IZQUIERDA
+};
+
+BoteAnimado boteDerecho =
+{
+    glm::vec3(RADIO_RUTA_BOTES, -10.0f, -90.0f),
+    LONGITUD_TRAMO_BOTES + LONGITUD_CURVA_BOTES + Z_SUPERIOR_RUTA_BOTES + 90.0f,
+    2.8f, 180.0f, 2.4f, 0.0f,
+    BOTE_CORRIENTE_DERECHA
+};
+
+static void ActualizarBote(BoteAnimado& bote, float delta, float tiempo)
+{
+    delta = glm::clamp(delta, 0.0f, 0.05f);
+
+    float variacionCorriente =
+        1.0f + 0.045f * std::sin(tiempo * 0.22f + bote.faseCorriente) +
+        0.018f * std::sin(tiempo * 0.51f + bote.faseCorriente * 1.7f);
+
+    bote.progreso += bote.velocidad * variacionCorriente * delta;
+
+    if (bote.progreso >= LONGITUD_RUTA_BOTES)
+        bote.progreso -= LONGITUD_RUTA_BOTES;
+
+    glm::vec3 tangente(0.0f, 0.0f, 1.0f);
+
+    if (bote.progreso < LONGITUD_TRAMO_BOTES)
+    {
+        bote.estado = BOTE_CORRIENTE_IZQUIERDA;
+        bote.posicion.x = -RADIO_RUTA_BOTES;
+        bote.posicion.z = Z_INFERIOR_RUTA_BOTES + bote.progreso;
+        tangente = glm::vec3(0.0f, 0.0f, 1.0f);
+    }
+    else if (bote.progreso < LONGITUD_TRAMO_BOTES + LONGITUD_CURVA_BOTES)
+    {
+        bote.estado = BOTE_CURVA_SUPERIOR;
+        float distanciaCurva = bote.progreso - LONGITUD_TRAMO_BOTES;
+        float anguloCurva = PI_BOTES - distanciaCurva / RADIO_RUTA_BOTES;
+        bote.posicion.x = RADIO_RUTA_BOTES * std::cos(anguloCurva);
+        bote.posicion.z = Z_SUPERIOR_RUTA_BOTES + RADIO_RUTA_BOTES * std::sin(anguloCurva);
+        tangente = glm::vec3(std::sin(anguloCurva), 0.0f, -std::cos(anguloCurva));
+    }
+    else if (bote.progreso < 2.0f * LONGITUD_TRAMO_BOTES + LONGITUD_CURVA_BOTES)
+    {
+        bote.estado = BOTE_CORRIENTE_DERECHA;
+        float distanciaTramo = bote.progreso - LONGITUD_TRAMO_BOTES - LONGITUD_CURVA_BOTES;
+        bote.posicion.x = RADIO_RUTA_BOTES;
+        bote.posicion.z = Z_SUPERIOR_RUTA_BOTES - distanciaTramo;
+        tangente = glm::vec3(0.0f, 0.0f, -1.0f);
+    }
+    else
+    {
+        bote.estado = BOTE_CURVA_INFERIOR;
+        float distanciaCurva = bote.progreso - 2.0f * LONGITUD_TRAMO_BOTES - LONGITUD_CURVA_BOTES;
+        float anguloCurva = -distanciaCurva / RADIO_RUTA_BOTES;
+        bote.posicion.x = RADIO_RUTA_BOTES * std::cos(anguloCurva);
+        bote.posicion.z = Z_INFERIOR_RUTA_BOTES + RADIO_RUTA_BOTES * std::sin(anguloCurva);
+        tangente = glm::vec3(std::sin(anguloCurva), 0.0f, -std::cos(anguloCurva));
+    }
+
+    glm::vec3 normal(tangente.z, 0.0f, -tangente.x);
+    float derivaLateral =
+        0.16f * std::sin(tiempo * 0.19f + bote.faseCorriente) +
+        0.06f * std::sin(tiempo * 0.43f + bote.faseCorriente * 1.4f);
+
+    bote.posicion += normal * derivaLateral;
+
+    float orientacion = std::atan2(tangente.x, tangente.z);
+    if (orientacion < 0.0f)
+        orientacion += 2.0f * PI_BOTES;
+
+    bote.anguloY = glm::degrees(orientacion) +
+        1.0f * std::sin(tiempo * 0.31f + bote.faseCorriente);
+}
+
+static glm::mat4 CrearTransformacionFlotante(
+    const glm::vec3& posicion, const glm::vec3& escala, float anguloY,
+    float tiempo, float fase, const glm::vec3& pivoteLocal,
+    float amplitudVertical, float amplitudBalanceo)
+{
+    float oleajeLento = tiempo * 0.92f + fase;
+    float oleajeSecundario = tiempo * 1.31f + fase * 0.73f;
+
+    float altura =
+        (0.70f * std::sin(oleajeLento) +
+            0.30f * std::sin(oleajeSecundario)) * amplitudVertical;
+
+    float giroX = std::sin(oleajeLento * 0.76f + fase * 0.2f) *
+        glm::radians(amplitudBalanceo);
+    float giroZ = std::cos(oleajeLento * 0.67f + fase) *
+        glm::radians(amplitudBalanceo * 0.7f);
+    float giroY = std::sin(oleajeSecundario * 0.35f + fase) *
+        glm::radians(amplitudBalanceo * 0.16f);
+
+    glm::vec3 pivote = pivoteLocal * escala;
+
+    glm::mat4 model = glm::mat4(1.0f);
+    model = glm::translate(model, posicion + glm::vec3(0.0f, altura, 0.0f));
+    model = glm::translate(model, pivote);
+    model = glm::rotate(model, glm::radians(anguloY), glm::vec3(0.0f, 1.0f, 0.0f));
+    model = glm::rotate(model, giroY, glm::vec3(0.0f, 1.0f, 0.0f));
+    model = glm::rotate(model, giroX, glm::vec3(1.0f, 0.0f, 0.0f));
+    model = glm::rotate(model, giroZ, glm::vec3(0.0f, 0.0f, 1.0f));
+    model = glm::translate(model, -pivote);
+    model = glm::scale(model, escala);
+    return model;
+}
 
 glm::vec3 Light1 = glm::vec3(0);
 
@@ -418,6 +558,9 @@ int main()
 
         glfwPollEvents();
         DoMovement();
+
+        ActualizarBote(boteIzquierdo, deltaTime, currentFrame);
+        ActualizarBote(boteDerecho, deltaTime, currentFrame);
 
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -596,11 +739,22 @@ int main()
         glUniform1i(glGetUniformLocation(lightingShader.Program, "transparency"), 0);
         Tor.Draw(lightingShader);
 
-        // 5. Shorobuni
-        model = glm::mat4(1.0f);
-        model = glm::translate(model, glm::vec3(-14.0f, -10.0f, -30.0f));
-        model = glm::scale(model, glm::vec3(4.0f, 4.0f, 4.0f));
-        model = glm::rotate(model, glm::radians(45.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+        // 5. Bote izquierdo
+        model = CrearTransformacionFlotante(
+            boteIzquierdo.posicion, glm::vec3(4.0f), boteIzquierdo.anguloY,
+            currentFrame, boteIzquierdo.faseBalanceo, glm::vec3(0.0f, 0.47f, 0.0f),
+            0.10f, 2.5f
+        );
+        glUniformMatrix4fv(glGetUniformLocation(lightingShader.Program, "model"), 1, GL_FALSE, glm::value_ptr(model));
+        glUniform1i(glGetUniformLocation(lightingShader.Program, "transparency"), 0);
+        Sho.Draw(lightingShader);
+
+        // 5.1 Bote derecho
+        model = CrearTransformacionFlotante(
+            boteDerecho.posicion, glm::vec3(4.0f), boteDerecho.anguloY,
+            currentFrame, boteDerecho.faseBalanceo, glm::vec3(0.0f, 0.47f, 0.0f),
+            0.10f, 2.5f
+        );
         glUniformMatrix4fv(glGetUniformLocation(lightingShader.Program, "model"), 1, GL_FALSE, glm::value_ptr(model));
         glUniform1i(glGetUniformLocation(lightingShader.Program, "transparency"), 0);
         Sho.Draw(lightingShader);
@@ -711,8 +865,8 @@ int main()
         glUniformMatrix4fv(glGetUniformLocation(lightingShader.Program, "model"), 1, GL_FALSE, glm::value_ptr(model));
         glUniform1i(glGetUniformLocation(lightingShader.Program, "transparency"), 0);
         Edi.Draw(lightingShader);
-    
-		// 10.2 Edificio Derecho 3
+
+        // 10.2 Edificio Derecho 3
 
         model = glm::mat4(1.0f);
         model = glm::translate(model, glm::vec3(90.0f, 0.95f, -121.0f));
@@ -722,7 +876,7 @@ int main()
         glUniform1i(glGetUniformLocation(lightingShader.Program, "transparency"), 0);
         Edi1.Draw(lightingShader);
 
-		// 10.3 Edificio Derecho 4
+        // 10.3 Edificio Derecho 4
 
         model = glm::mat4(1.0f);
         model = glm::translate(model, glm::vec3(85.0f, 0.95f, -84.0f));
@@ -868,14 +1022,14 @@ int main()
         // DIBUJO DE MODELOS ANIMADOS
         // ======================================================================================
 
-        // 9. Mujer Sola (con gesto cinemático)
+        // 9. Mujer Sola (con gesto cinem?tico)
         if (estadoMujSolo == 0 || estadoMujSolo == 4)
             Muj.UpdateAnimation(deltaTime, Muj.GetScenePointer());
         else
             Muj.UpdateAnimation(0.0f, Muj.GetScenePointer()); // Congelarla
 
         std::vector<glm::mat4> transformsMujSolo = Muj.GetFinalBoneMatrices();
-        AplicarGestoBrazo(Muj, transformsMujSolo, gestoMujSolo); // El código de tu compañero
+        AplicarGestoBrazo(Muj, transformsMujSolo, gestoMujSolo); // El c?digo de tu compa?ero
         for (GLuint i = 0; i < transformsMujSolo.size(); i++)
         {
             std::string uniformName = "finalBoneMatrices[" + std::to_string(i) + "]";
@@ -889,7 +1043,7 @@ int main()
         Muj.Draw(lightingShader);
 
 
-		// 10. Mujer1
+        // 10. Mujer1
         Muj1.UpdateAnimation(mujGirando ? 0.0f : deltaTime, Muj1.GetScenePointer());
         std::vector<glm::mat4> transforms = Muj1.GetFinalBoneMatrices();
         for (GLuint i = 0; i < transforms.size(); i++)
@@ -947,7 +1101,7 @@ int main()
         //glUniformMatrix4fv(glGetUniformLocation(lightingShader.Program, "model"), 1, GL_FALSE, glm::value_ptr(modelAnim));
         //Hom2.Draw(lightingShader);
 
-		// 14. Hombre2
+        // 14. Hombre2
         Hom2.UpdateAnimation(mujGirando ? 0.0f : deltaTime, Hom2.GetScenePointer());
         transforms = Hom2.GetFinalBoneMatrices();
         for (GLuint i = 0; i < transforms.size(); i++) {
