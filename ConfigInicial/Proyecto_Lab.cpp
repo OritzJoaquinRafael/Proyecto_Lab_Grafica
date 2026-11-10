@@ -360,7 +360,7 @@ BoteAnimado boteIzquierdo =
 {
     glm::vec3(-RADIO_RUTA_BOTES, -10.0f, -30.0f),
     -30.0f - Z_INFERIOR_RUTA_BOTES,
-    2.8f, 0.0f, 0.0f, 0.0f,
+    1.8f, 0.0f, 0.0f, 0.0f,
     BOTE_CORRIENTE_IZQUIERDA
 };
 
@@ -368,7 +368,7 @@ BoteAnimado boteDerecho =
 {
     glm::vec3(RADIO_RUTA_BOTES, -10.0f, -90.0f),
     LONGITUD_TRAMO_BOTES + LONGITUD_CURVA_BOTES + Z_SUPERIOR_RUTA_BOTES + 90.0f,
-    2.8f, 180.0f, 2.4f, 0.0f,
+    1.8f, 180.0f, 2.4f, 0.0f,
     BOTE_CORRIENTE_DERECHA
 };
 
@@ -441,19 +441,25 @@ static glm::mat4 CrearTransformacionFlotante(
     float tiempo, float fase, const glm::vec3& pivoteLocal,
     float amplitudVertical, float amplitudBalanceo)
 {
-    float oleajeLento = tiempo * 0.92f + fase;
-    float oleajeSecundario = tiempo * 1.31f + fase * 0.73f;
+    // Oleaje lento con dos frecuencias para evitar un movimiento mecanico.
+    float oleajeLento = tiempo * 0.62f + fase;
+    float oleajeSecundario = tiempo * 0.93f + fase * 0.73f;
 
     float altura =
         (0.70f * std::sin(oleajeLento) +
             0.30f * std::sin(oleajeSecundario)) * amplitudVertical;
 
-    float giroX = std::sin(oleajeLento * 0.76f + fase * 0.2f) *
-        glm::radians(amplitudBalanceo);
-    float giroZ = std::cos(oleajeLento * 0.67f + fase) *
-        glm::radians(amplitudBalanceo * 0.7f);
-    float giroY = std::sin(oleajeSecundario * 0.35f + fase) *
-        glm::radians(amplitudBalanceo * 0.16f);
+    // Inclinacion lateral y cabeceo suave provocados por la corriente.
+    float balanceoLateral =
+        std::sin(oleajeLento * 0.85f + fase * 0.2f) *
+        glm::radians(amplitudBalanceo) +
+        0.30f * std::sin(oleajeSecundario * 0.61f + fase * 1.1f) *
+        glm::radians(amplitudBalanceo * 0.45f);
+
+    float cabeceo = std::sin(oleajeLento * 0.72f + fase * 0.35f) *
+        glm::radians(amplitudBalanceo * 0.42f);
+    float giroY = std::sin(oleajeSecundario * 0.38f + fase) *
+        glm::radians(amplitudBalanceo * 0.12f);
 
     glm::vec3 pivote = pivoteLocal * escala;
 
@@ -462,8 +468,8 @@ static glm::mat4 CrearTransformacionFlotante(
     model = glm::translate(model, pivote);
     model = glm::rotate(model, glm::radians(anguloY), glm::vec3(0.0f, 1.0f, 0.0f));
     model = glm::rotate(model, giroY, glm::vec3(0.0f, 1.0f, 0.0f));
-    model = glm::rotate(model, giroX, glm::vec3(1.0f, 0.0f, 0.0f));
-    model = glm::rotate(model, giroZ, glm::vec3(0.0f, 0.0f, 1.0f));
+    model = glm::rotate(model, cabeceo, glm::vec3(1.0f, 0.0f, 0.0f));
+    model = glm::rotate(model, balanceoLateral, glm::vec3(0.0f, 0.0f, 1.0f));
     model = glm::translate(model, -pivote);
     model = glm::scale(model, escala);
     return model;
@@ -589,12 +595,12 @@ int main()
         glm::mat4 modeloBoteIzquierdo = CrearTransformacionFlotante(
             boteIzquierdo.posicion, glm::vec3(4.0f), boteIzquierdo.anguloY,
             currentFrame, boteIzquierdo.faseBalanceo, glm::vec3(0.0f, 0.47f, 0.0f),
-            0.10f, 2.5f
+            0.12f, 10.0f
         );
         glm::mat4 modeloBoteDerecho = CrearTransformacionFlotante(
             boteDerecho.posicion, glm::vec3(4.0f), boteDerecho.anguloY,
             currentFrame, boteDerecho.faseBalanceo, glm::vec3(0.0f, 0.47f, 0.0f),
-            0.10f, 2.5f
+            0.12f, 10.0f
         );
 
         glm::vec3 posicionLuzBoteIzquierdo = glm::vec3(
@@ -625,12 +631,6 @@ int main()
         glEnable(GL_DEPTH_TEST);
 
         lightingShader.Use();
-
-        // Titileo sincronizado de las luces de los botes de almas
-        float intensidadLlama = 0.92f
-            + 0.06f * sin(currentFrame * 7.0f)
-            + 0.02f * sin(currentFrame * 13.0f);
-
         glUniform1i(glGetUniformLocation(lightingShader.Program, "diffuse"), 0);
         glUniform1f(glGetUniformLocation(lightingShader.Program, "brilloLampara"), 0.0f);
 
@@ -704,18 +704,18 @@ int main()
 
         // Luz calida del bote de almas izquierdo
         glUniform3f(glGetUniformLocation(lightingShader.Program, "pointLights[5].position"), posicionLuzBoteIzquierdo.x, posicionLuzBoteIzquierdo.y, posicionLuzBoteIzquierdo.z);
-        glUniform3f(glGetUniformLocation(lightingShader.Program, "pointLights[5].ambient"), 0.045f * intensidadLlama, 0.022f * intensidadLlama, 0.008f * intensidadLlama);
-        glUniform3f(glGetUniformLocation(lightingShader.Program, "pointLights[5].diffuse"), 1.0f * intensidadLlama, 0.58f * intensidadLlama, 0.24f * intensidadLlama);
-        glUniform3f(glGetUniformLocation(lightingShader.Program, "pointLights[5].specular"), 1.0f * intensidadLlama, 0.72f * intensidadLlama, 0.38f * intensidadLlama);
+        glUniform3f(glGetUniformLocation(lightingShader.Program, "pointLights[5].ambient"), 0.045f, 0.022f, 0.008f);
+        glUniform3f(glGetUniformLocation(lightingShader.Program, "pointLights[5].diffuse"), 1.0f, 0.58f, 0.24f);
+        glUniform3f(glGetUniformLocation(lightingShader.Program, "pointLights[5].specular"), 1.0f, 0.72f, 0.38f);
         glUniform1f(glGetUniformLocation(lightingShader.Program, "pointLights[5].constant"), 1.0f);
         glUniform1f(glGetUniformLocation(lightingShader.Program, "pointLights[5].linear"), 0.08f);
         glUniform1f(glGetUniformLocation(lightingShader.Program, "pointLights[5].quadratic"), 0.02f);
 
         // Luz calida del bote de almas derecho
         glUniform3f(glGetUniformLocation(lightingShader.Program, "pointLights[6].position"), posicionLuzBoteDerecho.x, posicionLuzBoteDerecho.y, posicionLuzBoteDerecho.z);
-        glUniform3f(glGetUniformLocation(lightingShader.Program, "pointLights[6].ambient"), 0.045f * intensidadLlama, 0.022f * intensidadLlama, 0.008f * intensidadLlama);
-        glUniform3f(glGetUniformLocation(lightingShader.Program, "pointLights[6].diffuse"), 1.0f * intensidadLlama, 0.58f * intensidadLlama, 0.24f * intensidadLlama);
-        glUniform3f(glGetUniformLocation(lightingShader.Program, "pointLights[6].specular"), 1.0f * intensidadLlama, 0.72f * intensidadLlama, 0.38f * intensidadLlama);
+        glUniform3f(glGetUniformLocation(lightingShader.Program, "pointLights[6].ambient"), 0.045f, 0.022f, 0.008f);
+        glUniform3f(glGetUniformLocation(lightingShader.Program, "pointLights[6].diffuse"), 1.0f, 0.58f, 0.24f);
+        glUniform3f(glGetUniformLocation(lightingShader.Program, "pointLights[6].specular"), 1.0f, 0.72f, 0.38f);
         glUniform1f(glGetUniformLocation(lightingShader.Program, "pointLights[6].constant"), 1.0f);
         glUniform1f(glGetUniformLocation(lightingShader.Program, "pointLights[6].linear"), 0.08f);
         glUniform1f(glGetUniformLocation(lightingShader.Program, "pointLights[6].quadratic"), 0.02f);
@@ -1350,6 +1350,7 @@ int main()
         }
 
         // Fuentes visibles de luz calida sobre los dos botes
+        float intensidadLlama = 0.96f + 0.04f * sin(currentFrame * 7.0f);
         glUniform3f(lampColorLoc, intensidadLlama, 0.84f * intensidadLlama, 0.22f * intensidadLlama);
 
         model = glm::mat4(1.0f);
