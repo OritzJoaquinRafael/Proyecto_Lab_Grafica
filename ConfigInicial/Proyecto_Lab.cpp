@@ -78,6 +78,30 @@ float anguloInicialMujSolo = 0.0f;
 float anguloFinalMujSolo = 90.0f;
 float gestoMujSolo = 0.0f;
 
+// Recorrido independiente del hombre del lado derecho
+float homDerechoPosZ = 0.0f;
+const float POSICION_INICIAL_HOM_DERECHO_Z = -26.0f;
+const float DISTANCIA_HOM_DERECHO = 22.0f;
+const float VELOCIDAD_HOM_DERECHO = 1.3f;
+const float DURACION_GIRO_HOM_DERECHO = 0.8f;
+int estadoHomDerecho = 0; // 0: avanza, 1: gira, 2: regresa, 3: gira al inicio
+float tiempoGiroHomDerecho = 0.0f;
+float anguloHomDerecho = 180.0f;
+float anguloInicialHomDerecho = 180.0f;
+float anguloFinalHomDerecho = 360.0f;
+
+// Recorrido del hombre que camina por el lado izquierdo del puente
+float homPuentePosX = -24.0f;
+const float HOM_PUENTE_INICIO_X = -24.0f;
+const float HOM_PUENTE_FINAL_X = -8.0f;
+const float VELOCIDAD_HOM_PUENTE = 1.0f;
+int estadoHomPuente = 0; // 0: avanza, 1: gira, 2: regresa, 3: gira al inicio
+float tiempoGiroHomPuente = 0.0f;
+float anguloHomPuente = 90.0f;
+float anguloInicialHomPuente = 90.0f;
+float anguloFinalHomPuente = 270.0f;
+const float DURACION_GIRO_HOM_PUENTE = 0.8f;
+
 // Positions of the point lights
 glm::vec3 pointLightPositions[] = {
     glm::vec3(-15.0f, 2.0f, -6.5f),  // Luz 0: Ciudad 1
@@ -562,6 +586,24 @@ int main()
         ActualizarBote(boteIzquierdo, deltaTime, currentFrame);
         ActualizarBote(boteDerecho, deltaTime, currentFrame);
 
+        glm::mat4 modeloBoteIzquierdo = CrearTransformacionFlotante(
+            boteIzquierdo.posicion, glm::vec3(4.0f), boteIzquierdo.anguloY,
+            currentFrame, boteIzquierdo.faseBalanceo, glm::vec3(0.0f, 0.47f, 0.0f),
+            0.10f, 2.5f
+        );
+        glm::mat4 modeloBoteDerecho = CrearTransformacionFlotante(
+            boteDerecho.posicion, glm::vec3(4.0f), boteDerecho.anguloY,
+            currentFrame, boteDerecho.faseBalanceo, glm::vec3(0.0f, 0.47f, 0.0f),
+            0.10f, 2.5f
+        );
+
+        glm::vec3 posicionLuzBoteIzquierdo = glm::vec3(
+            modeloBoteIzquierdo * glm::vec4(0.0f, 0.78f, 0.0f, 1.0f)
+        );
+        glm::vec3 posicionLuzBoteDerecho = glm::vec3(
+            modeloBoteDerecho * glm::vec4(0.0f, 0.78f, 0.0f, 1.0f)
+        );
+
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -584,6 +626,7 @@ int main()
 
         lightingShader.Use();
         glUniform1i(glGetUniformLocation(lightingShader.Program, "diffuse"), 0);
+        glUniform1f(glGetUniformLocation(lightingShader.Program, "brilloLampara"), 0.0f);
 
         GLint viewPosLoc = glGetUniformLocation(lightingShader.Program, "viewPos");
         glUniform3f(viewPosLoc, camera.GetPosition().x, camera.GetPosition().y, camera.GetPosition().z);
@@ -652,6 +695,24 @@ int main()
         glUniform1f(glGetUniformLocation(lightingShader.Program, "pointLights[4].constant"), 1.0f);
         glUniform1f(glGetUniformLocation(lightingShader.Program, "pointLights[4].linear"), 0.09f);
         glUniform1f(glGetUniformLocation(lightingShader.Program, "pointLights[4].quadratic"), 0.032f);
+
+        // Luz calida del bote de almas izquierdo
+        glUniform3f(glGetUniformLocation(lightingShader.Program, "pointLights[5].position"), posicionLuzBoteIzquierdo.x, posicionLuzBoteIzquierdo.y, posicionLuzBoteIzquierdo.z);
+        glUniform3f(glGetUniformLocation(lightingShader.Program, "pointLights[5].ambient"), 0.045f, 0.022f, 0.008f);
+        glUniform3f(glGetUniformLocation(lightingShader.Program, "pointLights[5].diffuse"), 1.0f, 0.58f, 0.24f);
+        glUniform3f(glGetUniformLocation(lightingShader.Program, "pointLights[5].specular"), 1.0f, 0.72f, 0.38f);
+        glUniform1f(glGetUniformLocation(lightingShader.Program, "pointLights[5].constant"), 1.0f);
+        glUniform1f(glGetUniformLocation(lightingShader.Program, "pointLights[5].linear"), 0.08f);
+        glUniform1f(glGetUniformLocation(lightingShader.Program, "pointLights[5].quadratic"), 0.02f);
+
+        // Luz calida del bote de almas derecho
+        glUniform3f(glGetUniformLocation(lightingShader.Program, "pointLights[6].position"), posicionLuzBoteDerecho.x, posicionLuzBoteDerecho.y, posicionLuzBoteDerecho.z);
+        glUniform3f(glGetUniformLocation(lightingShader.Program, "pointLights[6].ambient"), 0.045f, 0.022f, 0.008f);
+        glUniform3f(glGetUniformLocation(lightingShader.Program, "pointLights[6].diffuse"), 1.0f, 0.58f, 0.24f);
+        glUniform3f(glGetUniformLocation(lightingShader.Program, "pointLights[6].specular"), 1.0f, 0.72f, 0.38f);
+        glUniform1f(glGetUniformLocation(lightingShader.Program, "pointLights[6].constant"), 1.0f);
+        glUniform1f(glGetUniformLocation(lightingShader.Program, "pointLights[6].linear"), 0.08f);
+        glUniform1f(glGetUniformLocation(lightingShader.Program, "pointLights[6].quadratic"), 0.02f);
 
         // SpotLight
         glUniform3f(glGetUniformLocation(lightingShader.Program, "spotLight.position"), camera.GetPosition().x, camera.GetPosition().y, camera.GetPosition().z);
@@ -740,21 +801,13 @@ int main()
         Tor.Draw(lightingShader);
 
         // 5. Bote izquierdo
-        model = CrearTransformacionFlotante(
-            boteIzquierdo.posicion, glm::vec3(4.0f), boteIzquierdo.anguloY,
-            currentFrame, boteIzquierdo.faseBalanceo, glm::vec3(0.0f, 0.47f, 0.0f),
-            0.10f, 2.5f
-        );
+        model = modeloBoteIzquierdo;
         glUniformMatrix4fv(glGetUniformLocation(lightingShader.Program, "model"), 1, GL_FALSE, glm::value_ptr(model));
         glUniform1i(glGetUniformLocation(lightingShader.Program, "transparency"), 0);
         Sho.Draw(lightingShader);
 
         // 5.1 Bote derecho
-        model = CrearTransformacionFlotante(
-            boteDerecho.posicion, glm::vec3(4.0f), boteDerecho.anguloY,
-            currentFrame, boteDerecho.faseBalanceo, glm::vec3(0.0f, 0.47f, 0.0f),
-            0.10f, 2.5f
-        );
+        model = modeloBoteDerecho;
         glUniformMatrix4fv(glGetUniformLocation(lightingShader.Program, "model"), 1, GL_FALSE, glm::value_ptr(model));
         glUniform1i(glGetUniformLocation(lightingShader.Program, "transparency"), 0);
         Sho.Draw(lightingShader);
@@ -1019,6 +1072,114 @@ int main()
         }
 
         // ======================================================================================
+        // RECORRIDO INDEPENDIENTE DEL HOMBRE DEL LADO DERECHO
+        // ======================================================================================
+        if (estadoHomDerecho == 0)
+        {
+            homDerechoPosZ += VELOCIDAD_HOM_DERECHO * deltaTime;
+
+            if (homDerechoPosZ >= DISTANCIA_HOM_DERECHO)
+            {
+                homDerechoPosZ = DISTANCIA_HOM_DERECHO;
+                estadoHomDerecho = 1;
+                tiempoGiroHomDerecho = 0.0f;
+                anguloInicialHomDerecho = anguloHomDerecho;
+                anguloFinalHomDerecho = 360.0f;
+            }
+        }
+        else if (estadoHomDerecho == 1)
+        {
+            tiempoGiroHomDerecho += deltaTime;
+            float progresoGiroHomDerecho = glm::clamp(tiempoGiroHomDerecho / DURACION_GIRO_HOM_DERECHO, 0.0f, 1.0f);
+            anguloHomDerecho = glm::mix(anguloInicialHomDerecho, anguloFinalHomDerecho, progresoGiroHomDerecho);
+
+            if (progresoGiroHomDerecho >= 1.0f)
+            {
+                anguloHomDerecho = 360.0f;
+                estadoHomDerecho = 2;
+            }
+        }
+        else if (estadoHomDerecho == 2)
+        {
+            homDerechoPosZ -= VELOCIDAD_HOM_DERECHO * deltaTime;
+
+            if (homDerechoPosZ <= 0.0f)
+            {
+                homDerechoPosZ = 0.0f;
+                estadoHomDerecho = 3;
+                tiempoGiroHomDerecho = 0.0f;
+                anguloInicialHomDerecho = anguloHomDerecho;
+                anguloFinalHomDerecho = 180.0f;
+            }
+        }
+        else if (estadoHomDerecho == 3)
+        {
+            tiempoGiroHomDerecho += deltaTime;
+            float progresoGiroHomDerecho = glm::clamp(tiempoGiroHomDerecho / DURACION_GIRO_HOM_DERECHO, 0.0f, 1.0f);
+            anguloHomDerecho = glm::mix(anguloInicialHomDerecho, anguloFinalHomDerecho, progresoGiroHomDerecho);
+
+            if (progresoGiroHomDerecho >= 1.0f)
+            {
+                anguloHomDerecho = 180.0f;
+                estadoHomDerecho = 0;
+            }
+        }
+
+        // ======================================================================================
+        // RECORRIDO DEL HOMBRE POR EL LADO IZQUIERDO DEL PUENTE
+        // ======================================================================================
+        if (estadoHomPuente == 0)
+        {
+            homPuentePosX += VELOCIDAD_HOM_PUENTE * deltaTime;
+
+            if (homPuentePosX >= HOM_PUENTE_FINAL_X)
+            {
+                homPuentePosX = HOM_PUENTE_FINAL_X;
+                estadoHomPuente = 1;
+                tiempoGiroHomPuente = 0.0f;
+                anguloInicialHomPuente = anguloHomPuente;
+                anguloFinalHomPuente = 270.0f;
+            }
+        }
+        else if (estadoHomPuente == 1)
+        {
+            tiempoGiroHomPuente += deltaTime;
+            float progresoGiroPuente = glm::clamp(tiempoGiroHomPuente / DURACION_GIRO_HOM_PUENTE, 0.0f, 1.0f);
+            anguloHomPuente = glm::mix(anguloInicialHomPuente, anguloFinalHomPuente, progresoGiroPuente);
+
+            if (progresoGiroPuente >= 1.0f)
+            {
+                anguloHomPuente = 270.0f;
+                estadoHomPuente = 2;
+            }
+        }
+        else if (estadoHomPuente == 2)
+        {
+            homPuentePosX -= VELOCIDAD_HOM_PUENTE * deltaTime;
+
+            if (homPuentePosX <= HOM_PUENTE_INICIO_X)
+            {
+                homPuentePosX = HOM_PUENTE_INICIO_X;
+                estadoHomPuente = 3;
+                tiempoGiroHomPuente = 0.0f;
+                anguloInicialHomPuente = anguloHomPuente;
+                anguloFinalHomPuente = 90.0f;
+            }
+        }
+        else if (estadoHomPuente == 3)
+        {
+            tiempoGiroHomPuente += deltaTime;
+            float progresoGiroPuente = glm::clamp(tiempoGiroHomPuente / DURACION_GIRO_HOM_PUENTE, 0.0f, 1.0f);
+            anguloHomPuente = glm::mix(anguloInicialHomPuente, anguloFinalHomPuente, progresoGiroPuente);
+
+            if (progresoGiroPuente >= 1.0f)
+            {
+                anguloHomPuente = 90.0f;
+                estadoHomPuente = 0;
+            }
+        }
+
+        // ======================================================================================
         // DIBUJO DE MODELOS ANIMADOS
         // ======================================================================================
 
@@ -1101,16 +1262,16 @@ int main()
         //glUniformMatrix4fv(glGetUniformLocation(lightingShader.Program, "model"), 1, GL_FALSE, glm::value_ptr(modelAnim));
         //Hom2.Draw(lightingShader);
 
-        // 14. Hombre2
-        Hom2.UpdateAnimation(mujGirando ? 0.0f : deltaTime, Hom2.GetScenePointer());
+        // 14. Hombre2 (recorrido independiente dentro del muelle derecho)
+        Hom2.UpdateAnimation((estadoHomDerecho == 0 || estadoHomDerecho == 2) ? deltaTime : 0.0f, Hom2.GetScenePointer());
         transforms = Hom2.GetFinalBoneMatrices();
         for (GLuint i = 0; i < transforms.size(); i++) {
             std::string uniformName = "finalBoneMatrices[" + std::to_string(i) + "]";
             glUniformMatrix4fv(glGetUniformLocation(lightingShader.Program, uniformName.c_str()), 1, GL_FALSE, glm::value_ptr(transforms[i]));
         }
         modelAnim = glm::mat4(1.0f);
-        modelAnim = glm::translate(modelAnim, glm::vec3(30.0f, -7.8f, -20.0f + mujPos_Z));
-        modelAnim = glm::rotate(modelAnim, glm::radians(anguloMuj), glm::vec3(0.0f, 1.0f, 0.0f)); // Agregada rotacion para que coincida con las mujeres
+        modelAnim = glm::translate(modelAnim, glm::vec3(30.0f, -7.8f, POSICION_INICIAL_HOM_DERECHO_Z - homDerechoPosZ));
+        modelAnim = glm::rotate(modelAnim, glm::radians(anguloHomDerecho), glm::vec3(0.0f, 1.0f, 0.0f));
         modelAnim = glm::scale(modelAnim, glm::vec3(2.0f, 2.0f, 2.0f));
         glUniformMatrix4fv(glGetUniformLocation(lightingShader.Program, "model"), 1, GL_FALSE, glm::value_ptr(modelAnim));
         Hom2.Draw(lightingShader);
@@ -1138,7 +1299,8 @@ int main()
             glUniformMatrix4fv(glGetUniformLocation(lightingShader.Program, uniformName.c_str()), 1, GL_FALSE, glm::value_ptr(transforms[i]));
         }
         modelAnim = glm::mat4(1.0f);
-        modelAnim = glm::translate(modelAnim, glm::vec3(15.0f, -5.0f, -62.0f));
+        modelAnim = glm::translate(modelAnim, glm::vec3(homPuentePosX, -5.0f, -62.0f));
+        modelAnim = glm::rotate(modelAnim, glm::radians(anguloHomPuente), glm::vec3(0.0f, 1.0f, 0.0f));
         modelAnim = glm::scale(modelAnim, glm::vec3(2.0f, 2.0f, 2.0f));
         glUniformMatrix4fv(glGetUniformLocation(lightingShader.Program, "model"), 1, GL_FALSE, glm::value_ptr(modelAnim));
         HomB.Draw(lightingShader);
@@ -1164,14 +1326,12 @@ int main()
         modelLoc = glGetUniformLocation(lampShader.Program, "model");
         viewLoc = glGetUniformLocation(lampShader.Program, "view");
         projLoc = glGetUniformLocation(lampShader.Program, "projection");
+        GLint lampColorLoc = glGetUniformLocation(lampShader.Program, "lampColor");
 
         glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
         glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projection));
 
-        model = glm::mat4(1);
-        model = glm::translate(model, lightPos);
-        model = glm::scale(model, glm::vec3(0.2f));
-        glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+        glUniform3f(lampColorLoc, 1.0f, 1.0f, 1.0f);
 
         for (GLuint i = 0; i < 5; i++)
         {
@@ -1182,6 +1342,24 @@ int main()
             glBindVertexArray(VAO);
             glDrawArrays(GL_TRIANGLES, 0, 36);
         }
+
+        // Fuentes visibles de luz calida sobre los dos botes
+        float intensidadLlama = 0.96f + 0.04f * sin(currentFrame * 7.0f);
+        glUniform3f(lampColorLoc, intensidadLlama, 0.84f * intensidadLlama, 0.22f * intensidadLlama);
+
+        model = glm::mat4(1.0f);
+        model = glm::translate(model, posicionLuzBoteIzquierdo);
+        model = glm::scale(model, glm::vec3(0.14f, 0.17f, 0.14f));
+        glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+        glBindVertexArray(VAO);
+        glDrawArrays(GL_TRIANGLES, 0, 36);
+
+        model = glm::mat4(1.0f);
+        model = glm::translate(model, posicionLuzBoteDerecho);
+        model = glm::scale(model, glm::vec3(0.14f, 0.17f, 0.14f));
+        glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+        glDrawArrays(GL_TRIANGLES, 0, 36);
+
         glBindVertexArray(0);
 
         glfwSwapBuffers(window);
