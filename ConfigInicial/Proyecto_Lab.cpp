@@ -625,6 +625,12 @@ int main()
         glEnable(GL_DEPTH_TEST);
 
         lightingShader.Use();
+
+        // Titileo sincronizado de las luces de los botes de almas
+        float intensidadLlama = 0.92f
+            + 0.06f * sin(currentFrame * 7.0f)
+            + 0.02f * sin(currentFrame * 13.0f);
+
         glUniform1i(glGetUniformLocation(lightingShader.Program, "diffuse"), 0);
         glUniform1f(glGetUniformLocation(lightingShader.Program, "brilloLampara"), 0.0f);
 
@@ -698,18 +704,18 @@ int main()
 
         // Luz calida del bote de almas izquierdo
         glUniform3f(glGetUniformLocation(lightingShader.Program, "pointLights[5].position"), posicionLuzBoteIzquierdo.x, posicionLuzBoteIzquierdo.y, posicionLuzBoteIzquierdo.z);
-        glUniform3f(glGetUniformLocation(lightingShader.Program, "pointLights[5].ambient"), 0.045f, 0.022f, 0.008f);
-        glUniform3f(glGetUniformLocation(lightingShader.Program, "pointLights[5].diffuse"), 1.0f, 0.58f, 0.24f);
-        glUniform3f(glGetUniformLocation(lightingShader.Program, "pointLights[5].specular"), 1.0f, 0.72f, 0.38f);
+        glUniform3f(glGetUniformLocation(lightingShader.Program, "pointLights[5].ambient"), 0.045f * intensidadLlama, 0.022f * intensidadLlama, 0.008f * intensidadLlama);
+        glUniform3f(glGetUniformLocation(lightingShader.Program, "pointLights[5].diffuse"), 1.0f * intensidadLlama, 0.58f * intensidadLlama, 0.24f * intensidadLlama);
+        glUniform3f(glGetUniformLocation(lightingShader.Program, "pointLights[5].specular"), 1.0f * intensidadLlama, 0.72f * intensidadLlama, 0.38f * intensidadLlama);
         glUniform1f(glGetUniformLocation(lightingShader.Program, "pointLights[5].constant"), 1.0f);
         glUniform1f(glGetUniformLocation(lightingShader.Program, "pointLights[5].linear"), 0.08f);
         glUniform1f(glGetUniformLocation(lightingShader.Program, "pointLights[5].quadratic"), 0.02f);
 
         // Luz calida del bote de almas derecho
         glUniform3f(glGetUniformLocation(lightingShader.Program, "pointLights[6].position"), posicionLuzBoteDerecho.x, posicionLuzBoteDerecho.y, posicionLuzBoteDerecho.z);
-        glUniform3f(glGetUniformLocation(lightingShader.Program, "pointLights[6].ambient"), 0.045f, 0.022f, 0.008f);
-        glUniform3f(glGetUniformLocation(lightingShader.Program, "pointLights[6].diffuse"), 1.0f, 0.58f, 0.24f);
-        glUniform3f(glGetUniformLocation(lightingShader.Program, "pointLights[6].specular"), 1.0f, 0.72f, 0.38f);
+        glUniform3f(glGetUniformLocation(lightingShader.Program, "pointLights[6].ambient"), 0.045f * intensidadLlama, 0.022f * intensidadLlama, 0.008f * intensidadLlama);
+        glUniform3f(glGetUniformLocation(lightingShader.Program, "pointLights[6].diffuse"), 1.0f * intensidadLlama, 0.58f * intensidadLlama, 0.24f * intensidadLlama);
+        glUniform3f(glGetUniformLocation(lightingShader.Program, "pointLights[6].specular"), 1.0f * intensidadLlama, 0.72f * intensidadLlama, 0.38f * intensidadLlama);
         glUniform1f(glGetUniformLocation(lightingShader.Program, "pointLights[6].constant"), 1.0f);
         glUniform1f(glGetUniformLocation(lightingShader.Program, "pointLights[6].linear"), 0.08f);
         glUniform1f(glGetUniformLocation(lightingShader.Program, "pointLights[6].quadratic"), 0.02f);
@@ -1344,7 +1350,6 @@ int main()
         }
 
         // Fuentes visibles de luz calida sobre los dos botes
-        float intensidadLlama = 0.96f + 0.04f * sin(currentFrame * 7.0f);
         glUniform3f(lampColorLoc, intensidadLlama, 0.84f * intensidadLlama, 0.22f * intensidadLlama);
 
         model = glm::mat4(1.0f);
