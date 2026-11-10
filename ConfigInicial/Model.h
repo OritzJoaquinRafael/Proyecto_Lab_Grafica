@@ -63,6 +63,11 @@ public:
 
 	const aiScene* GetScenePointer() { return m_ScenePointer; }
 
+	void SetRightArmGesture(float amount)
+	{
+		m_RightArmGesture = glm::clamp(amount, 0.0f, 1.0f);
+	}
+
 	// Avanza la animacion y recalcula las matrices de todos los huesos.
 	void UpdateAnimation(float deltaTime, const aiScene* scene)
 	{
@@ -122,6 +127,35 @@ public:
 			nodeTransformation = mTranslation * mRotation * mScale;
 		}
 
+		if (m_RightArmGesture > 0.0f)
+		{
+			float intensidad = m_RightArmGesture;
+
+			if (nodeName == "mixamorig:RightShoulder")
+			{
+				nodeTransformation = nodeTransformation *
+					glm::rotate(glm::mat4(1.0f),
+						glm::radians(10.0f * intensidad),
+						glm::vec3(0.0f, 0.0f, 1.0f));
+			}
+
+			if (nodeName == "mixamorig:RightArm")
+			{
+				nodeTransformation = nodeTransformation *
+					glm::rotate(glm::mat4(1.0f),
+						glm::radians(55.0f * intensidad),
+						glm::vec3(0.0f, 0.0f, 1.0f));
+			}
+
+			if (nodeName == "mixamorig:RightForeArm")
+			{
+				nodeTransformation = nodeTransformation *
+					glm::rotate(glm::mat4(1.0f),
+						glm::radians(-15.0f * intensidad),
+						glm::vec3(0.0f, 0.0f, 1.0f));
+			}
+		}
+
 		glm::mat4 globalTransform = parentTransform * nodeTransformation;
 
 		// Si el nodo es un hueso del modelo, guardar su transformacion final
@@ -161,6 +195,7 @@ private:
 
 	glm::mat4 m_GlobalInverse = glm::mat4(1.0f);
 	float m_AnimationTime = 0.0f;
+	float m_RightArmGesture = 0.0f;
 
 	const aiScene* m_ScenePointer = nullptr;
 	Assimp::Importer importer;
