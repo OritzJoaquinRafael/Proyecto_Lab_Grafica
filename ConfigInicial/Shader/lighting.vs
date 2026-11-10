@@ -16,9 +16,20 @@ uniform mat4 finalBoneMatrices[MAX_BONES];
 uniform mat4 model;
 uniform mat4 view;
 uniform mat4 projection;
+uniform int isWater;
 
 void main()
 {
+    if (isWater == 1)
+    {
+        vec4 worldPos = model * vec4(position, 1.0);
+        gl_Position = projection * view * worldPos;
+        FragPos = vec3(worldPos);
+        Normal = normalize(mat3(transpose(inverse(model))) * normal);
+        TexCoords = texCoords;
+        return;
+    }
+
     vec4 totalPosition = vec4(0.0);
     vec3 totalNormal = vec3(0.0);
     float totalWeight = 0.0;

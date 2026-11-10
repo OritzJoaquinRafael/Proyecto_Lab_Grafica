@@ -632,6 +632,7 @@ int main()
 
         lightingShader.Use();
         glUniform1i(glGetUniformLocation(lightingShader.Program, "diffuse"), 0);
+        glUniform1i(glGetUniformLocation(lightingShader.Program, "isWater"), 0);
         glUniform1f(glGetUniformLocation(lightingShader.Program, "brilloLampara"), 0.0f);
 
         GLint viewPosLoc = glGetUniformLocation(lightingShader.Program, "viewPos");
@@ -826,16 +827,20 @@ int main()
         glUniform1i(glGetUniformLocation(lightingShader.Program, "transparency"), 0);
         Pue.Draw(lightingShader);
 
-        // 7. Agua (Transparencia)
+        // 7. Agua continua y animada
         model = glm::mat4(1.0f);
-        glEnable(GL_BLEND);
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-        model = glm::translate(model, glm::vec3(0.0f, -12.5f, -60.0f));
-        model = glm::scale(model, glm::vec3(32.0f, 10.0f, 80.0f));
+        model = glm::translate(model, glm::vec3(0.0f, -9.748f, -60.0f));
+        model = glm::scale(model, glm::vec3(61.0f, 0.04f, 154.0f));
         glUniformMatrix4fv(glGetUniformLocation(lightingShader.Program, "model"), 1, GL_FALSE, glm::value_ptr(model));
-        glUniform1i(glGetUniformLocation(lightingShader.Program, "transparency"), 1);
-        Agu.Draw(lightingShader);
+        glUniform1f(glGetUniformLocation(lightingShader.Program, "tiempoAgua"), currentFrame);
+        glUniform1i(glGetUniformLocation(lightingShader.Program, "transparency"), 2);
+        glUniform1i(glGetUniformLocation(lightingShader.Program, "isWater"), 1);
         glDisable(GL_BLEND);
+        glBindVertexArray(VAO);
+        glDrawArrays(GL_TRIANGLES, 0, 36);
+        glBindVertexArray(0);
+        glUniform1i(glGetUniformLocation(lightingShader.Program, "isWater"), 0);
+        glUniform1i(glGetUniformLocation(lightingShader.Program, "transparency"), 0);
 
         // 8.0 Gorin
         model = glm::mat4(1.0f);
