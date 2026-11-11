@@ -7,6 +7,7 @@
 #include <iostream>
 #include <cmath>
 #include <vector>
+#include <algorithm>
 #include <string>
 #include <fstream> // Necesario para guardar y cargar KeyFrames
 
@@ -62,6 +63,7 @@ bool animarMujer2 = false;
 bool animarMujerSola = false;
 bool animarHombreDerecho = false;
 bool animarHombreSaludo = false;
+bool animarHombrePuente = false;
 bool animarMujerSaludo = false;
 bool animarBotes = false;
 float tiempoAnimacionBotes = 0.0f;
@@ -261,7 +263,7 @@ void loadAnimationFromFile() {
 bool animarLinternasAvance = false;
 bool animarLinternasBalanceo = false;
 
-const float VELOCIDAD_LINTERNAS = 2.5f;
+const float VELOCIDAD_LINTERNAS = 1.6f;
 const float Z_INICIO_LINTERNAS = 13.0f;
 const float Z_FIN_LINTERNAS = -130.0f;
 const int NUM_LINTERNAS = 8;
@@ -270,21 +272,106 @@ struct LinternaAnimada {
     glm::vec3 posicionBase;
     float progresoZ;
     float faseBalanceo;
+    float faseCorriente;
+    float velocidadFactor;
+    float amplitudDeriva;
+    float amplitudVertical;
+    float amplitudInclinacion;
 };
 LinternaAnimada linternas[NUM_LINTERNAS];
 
+static float ObtenerZActualLinterna(int indice)
+{
+    return linternas[indice].posicionBase.z + linternas[indice].progresoZ;
+}
+
+static void ReiniciarLinternaSegura(int indice)
+{
+    bool filaIzquierda = linternas[indice].posicionBase.x < 0.0f;
+
+    const float margenLimite = 1.0f;
+    const float separacionMinima = 16.0f;
+    const float pasoBusqueda = 0.5f;
+
+    float limiteSuperior = Z_INICIO_LINTERNAS - margenLimite;
+    float limiteInferior = Z_FIN_LINTERNAS + margenLimite;
+    float zRespawn = limiteSuperior;
+    bool espacioEncontrado = false;
+
+    // Buscar desde el borde superior hacia dentro del río.
+    // Se elige la primera posición que mantenga distancia con las demás
+    // linternas de la misma fila.
+    for (float candidato = limiteSuperior;
+        candidato >= limiteInferior;
+        candidato -= pasoBusqueda)
+    {
+        bool posicionLibre = true;
+
+        for (int j = 0; j < NUM_LINTERNAS; j++)
+        {
+            if (j == indice)
+                continue;
+
+            bool mismaFila = (linternas[j].posicionBase.x < 0.0f) == filaIzquierda;
+            if (!mismaFila)
+                continue;
+
+            float zOtraLinterna = ObtenerZActualLinterna(j);
+
+            if (std::fabs(candidato - zOtraLinterna) < separacionMinima)
+            {
+                posicionLibre = false;
+                break;
+            }
+        }
+
+        if (posicionLibre)
+        {
+            zRespawn = candidato;
+            espacioEncontrado = true;
+            break;
+        }
+    }
+
+    // Con solo cuatro linternas por fila siempre debe existir un espacio.
+    // Este respaldo mantiene la posición dentro del río si cambian los datos.
+    if (!espacioEncontrado)
+        zRespawn = limiteInferior;
+
+    zRespawn = glm::clamp(zRespawn, limiteInferior, limiteSuperior);
+
+    linternas[indice].progresoZ =
+        zRespawn - linternas[indice].posicionBase.z;
+}
+
 void InicializarLinternas() {
+    const float factoresVelocidad[NUM_LINTERNAS] = {
+        0.96f, 0.99f, 1.02f, 1.05f,
+        0.97f, 1.00f, 1.03f, 1.06f
+    };
+
     float separacionZ = (Z_INICIO_LINTERNAS - Z_FIN_LINTERNAS) / 4.0f;
     for (int i = 0; i < 4; i++) {
         // Fila Izquierda
         linternas[i].posicionBase = glm::vec3(-6.0f, -9.8f, Z_INICIO_LINTERNAS - (i * separacionZ));
         linternas[i].progresoZ = 0.0f;
         linternas[i].faseBalanceo = i * 1.2f;
+        linternas[i].faseCorriente = i * 0.91f;
+        linternas[i].velocidadFactor = factoresVelocidad[i];
+        linternas[i].amplitudDeriva = 0.18f + (i % 4) * 0.035f;
+        linternas[i].amplitudVertical = 0.09f + (i % 4) * 0.012f;
+        linternas[i].amplitudInclinacion = 5.0f + (i % 4) * 0.8f;
 
         // Fila Derecha
-        linternas[i + 4].posicionBase = glm::vec3(6.0f, -9.8f, Z_INICIO_LINTERNAS - (i * separacionZ));
-        linternas[i + 4].progresoZ = 0.0f;
-        linternas[i + 4].faseBalanceo = (i + 4) * 0.8f;
+        int indiceDerecha = i + 4;
+        linternas[indiceDerecha].posicionBase = glm::vec3(6.0f, -9.8f, Z_INICIO_LINTERNAS - (i * separacionZ));
+        linternas[indiceDerecha].progresoZ = 0.0f;
+        linternas[indiceDerecha].faseBalanceo = indiceDerecha * 0.8f;
+        linternas[indiceDerecha].faseCorriente = indiceDerecha * 0.73f + 0.45f;
+        linternas[indiceDerecha].velocidadFactor = factoresVelocidad[indiceDerecha];
+        linternas[indiceDerecha].amplitudDeriva = 0.18f + (i % 4) * 0.035f;
+        linternas[indiceDerecha].amplitudVertical = 0.09f + (i % 4) * 0.012f;
+        linternas[indiceDerecha].amplitudInclinacion = 5.0f + (i % 4) * 0.8f;
     }
 }
 
@@ -652,64 +739,44 @@ BoteAnimado boteIzquierdo =
 BoteAnimado boteDerecho =
 {
     glm::vec3(RADIO_RUTA_BOTES, -10.0f, -90.0f),
-    LONGITUD_TRAMO_BOTES + LONGITUD_CURVA_BOTES + Z_SUPERIOR_RUTA_BOTES + 90.0f,
-    1.8f, 180.0f, 2.4f, 0.0f,
+    98.0f,
+    1.8f, 180.0f, 2.4f, 1.8f,
     BOTE_CORRIENTE_DERECHA
 };
 static void ActualizarBote(BoteAnimado& bote, float delta, float tiempo)
 {
     delta = glm::clamp(delta, 0.0f, 0.05f);
+
     float variacionCorriente =
-        1.0f + 0.045f * std::sin(tiempo * 0.22f + bote.faseCorriente) +
-        0.018f * std::sin(tiempo * 0.51f + bote.faseCorriente * 1.7f);
+        1.0f +
+        0.035f * std::sin(tiempo * 0.22f + bote.faseCorriente) +
+        0.015f * std::sin(tiempo * 0.51f + bote.faseCorriente * 1.7f);
+
     bote.progreso += bote.velocidad * variacionCorriente * delta;
-    if (bote.progreso >= LONGITUD_RUTA_BOTES)
-        bote.progreso -= LONGITUD_RUTA_BOTES;
-    glm::vec3 tangente(0.0f, 0.0f, 1.0f);
-    if (bote.progreso < LONGITUD_TRAMO_BOTES)
+
+    // Al llegar al extremo del río, la embarcación vuelve al inicio
+    // de su carril, igual que las linternas flotantes.
+    if (bote.progreso >= LONGITUD_TRAMO_BOTES)
+        bote.progreso = 0.0f;
+
+    float derivaLateral =
+        0.12f * std::sin(tiempo * 0.19f + bote.faseCorriente) +
+        0.045f * std::sin(tiempo * 0.43f + bote.faseCorriente * 1.4f);
+
+    if (bote.estado == BOTE_CORRIENTE_IZQUIERDA)
     {
-        bote.estado = BOTE_CORRIENTE_IZQUIERDA;
-        bote.posicion.x = -RADIO_RUTA_BOTES;
+        bote.posicion.x = -RADIO_RUTA_BOTES + derivaLateral;
         bote.posicion.z = Z_INFERIOR_RUTA_BOTES + bote.progreso;
-        tangente = glm::vec3(0.0f, 0.0f, 1.0f);
-    }
-    else if (bote.progreso < LONGITUD_TRAMO_BOTES + LONGITUD_CURVA_BOTES)
-    {
-        bote.estado = BOTE_CURVA_SUPERIOR;
-        float distanciaCurva = bote.progreso - LONGITUD_TRAMO_BOTES;
-        float anguloCurva = PI_BOTES - distanciaCurva / RADIO_RUTA_BOTES;
-        bote.posicion.x = RADIO_RUTA_BOTES * std::cos(anguloCurva);
-        bote.posicion.z = Z_SUPERIOR_RUTA_BOTES + RADIO_RUTA_BOTES * std::sin(anguloCurva);
-        tangente = glm::vec3(std::sin(anguloCurva), 0.0f, -std::cos(anguloCurva));
-    }
-    else if (bote.progreso < 2.0f * LONGITUD_TRAMO_BOTES + LONGITUD_CURVA_BOTES)
-    {
-        bote.estado = BOTE_CORRIENTE_DERECHA;
-        float distanciaTramo = bote.progreso - LONGITUD_TRAMO_BOTES - LONGITUD_CURVA_BOTES;
-        bote.posicion.x = RADIO_RUTA_BOTES;
-        bote.posicion.z = Z_SUPERIOR_RUTA_BOTES - distanciaTramo;
-        tangente = glm::vec3(0.0f, 0.0f, -1.0f);
+        bote.anguloY = 0.0f;
     }
     else
     {
-        bote.estado = BOTE_CURVA_INFERIOR;
-        float distanciaCurva = bote.progreso - 2.0f * LONGITUD_TRAMO_BOTES - LONGITUD_CURVA_BOTES;
-        float anguloCurva = -distanciaCurva / RADIO_RUTA_BOTES;
-        bote.posicion.x = RADIO_RUTA_BOTES * std::cos(anguloCurva);
-        bote.posicion.z = Z_INFERIOR_RUTA_BOTES + RADIO_RUTA_BOTES * std::sin(anguloCurva);
-        tangente = glm::vec3(std::sin(anguloCurva), 0.0f, -std::cos(anguloCurva));
+        bote.posicion.x = RADIO_RUTA_BOTES + derivaLateral;
+        bote.posicion.z = Z_SUPERIOR_RUTA_BOTES - bote.progreso;
+        bote.anguloY = 180.0f;
     }
-    glm::vec3 normal(tangente.z, 0.0f, -tangente.x);
-    float derivaLateral =
-        0.16f * std::sin(tiempo * 0.19f + bote.faseCorriente) +
-        0.06f * std::sin(tiempo * 0.43f + bote.faseCorriente * 1.4f);
-    bote.posicion += normal * derivaLateral;
-    float orientacion = std::atan2(tangente.x, tangente.z);
-    if (orientacion < 0.0f)
-        orientacion += 2.0f * PI_BOTES;
-    bote.anguloY = glm::degrees(orientacion) +
-        1.0f * std::sin(tiempo * 0.31f + bote.faseCorriente);
 }
+
 static glm::mat4 CrearTransformacionFlotante(
     const glm::vec3& posicion, const glm::vec3& escala, float anguloY,
     float tiempo, float fase, const glm::vec3& pivoteLocal,
@@ -727,14 +794,11 @@ static glm::mat4 CrearTransformacionFlotante(
         glm::radians(amplitudBalanceo * 0.45f);
     float cabeceo = std::sin(oleajeLento * 0.72f + fase * 0.35f) *
         glm::radians(amplitudBalanceo * 0.42f);
-    float giroY = std::sin(oleajeSecundario * 0.38f + fase) *
-        glm::radians(amplitudBalanceo * 0.12f);
     glm::vec3 pivote = pivoteLocal * escala;
     glm::mat4 model = glm::mat4(1.0f);
     model = glm::translate(model, posicion + glm::vec3(0.0f, altura, 0.0f));
     model = glm::translate(model, pivote);
     model = glm::rotate(model, glm::radians(anguloY), glm::vec3(0.0f, 1.0f, 0.0f));
-    model = glm::rotate(model, giroY, glm::vec3(0.0f, 1.0f, 0.0f));
     model = glm::rotate(model, cabeceo, glm::vec3(1.0f, 0.0f, 0.0f));
     model = glm::rotate(model, balanceoLateral, glm::vec3(0.0f, 0.0f, 1.0f));
     model = glm::translate(model, -pivote);
@@ -1180,24 +1244,56 @@ int main()
 
         for (int i = 0; i < NUM_LINTERNAS; i++) {
             if (animarLinternasAvance) {
-                linternas[i].progresoZ -= VELOCIDAD_LINTERNAS * deltaTime;
+                float variacionCorriente =
+                    1.0f +
+                    0.045f * std::sin(currentFrame * 0.12f + linternas[i].faseCorriente) +
+                    0.015f * std::sin(currentFrame * 0.28f + linternas[i].faseBalanceo);
+
+                linternas[i].progresoZ -=
+                    VELOCIDAD_LINTERNAS * linternas[i].velocidadFactor *
+                    variacionCorriente * deltaTime;
+
                 float posActualZ = linternas[i].posicionBase.z + linternas[i].progresoZ;
 
                 if (posActualZ < Z_FIN_LINTERNAS) {
-                    linternas[i].progresoZ += (Z_INICIO_LINTERNAS - Z_FIN_LINTERNAS);
+                    ReiniciarLinternaSegura(i);
                 }
             }
 
-            float anguloBalanceo = 0.0f;
+            float derivaLateral = 0.0f;
             float alturaBalanceo = 0.0f;
+            float anguloBalanceo = 0.0f;
+            float cabeceo = 0.0f;
+            float giroCorriente = 0.0f;
+
             if (animarLinternasBalanceo) {
-                anguloBalanceo = std::sin(currentFrame * 2.0f + linternas[i].faseBalanceo) * 15.0f;
-                alturaBalanceo = std::cos(currentFrame * 1.5f + linternas[i].faseBalanceo) * 0.15f;
+                float oleajeLento = currentFrame * 0.58f + linternas[i].faseBalanceo;
+                float oleajeCorto = currentFrame * 0.91f + linternas[i].faseCorriente;
+
+                derivaLateral =
+                    std::sin(currentFrame * 0.31f + linternas[i].faseCorriente) *
+                    linternas[i].amplitudDeriva +
+                    std::sin(currentFrame * 0.67f + linternas[i].faseBalanceo) *
+                    linternas[i].amplitudDeriva * 0.28f;
+
+                alturaBalanceo =
+                    std::sin(oleajeLento) * linternas[i].amplitudVertical +
+                    std::sin(oleajeCorto) * linternas[i].amplitudVertical * 0.24f;
+
+                anguloBalanceo =
+                    std::sin(oleajeLento * 0.82f) * linternas[i].amplitudInclinacion +
+                    std::sin(oleajeCorto * 0.57f) * linternas[i].amplitudInclinacion * 0.22f;
+
+                cabeceo = std::sin(oleajeCorto * 0.72f + linternas[i].faseBalanceo) * 2.8f;
+                giroCorriente = std::sin(oleajeLento * 0.43f + linternas[i].faseCorriente) * 2.0f;
             }
 
-            glm::vec3 posFinal = linternas[i].posicionBase + glm::vec3(0.0f, alturaBalanceo, linternas[i].progresoZ);
+            glm::vec3 posFinal = linternas[i].posicionBase +
+                glm::vec3(derivaLateral, alturaBalanceo, linternas[i].progresoZ);
 
             model = glm::translate(glm::mat4(1.0f), posFinal);
+            model = glm::rotate(model, glm::radians(giroCorriente), glm::vec3(0.0f, 1.0f, 0.0f));
+            model = glm::rotate(model, glm::radians(cabeceo), glm::vec3(1.0f, 0.0f, 0.0f));
             model = glm::rotate(model, glm::radians(anguloBalanceo), glm::vec3(0.0f, 0.0f, 1.0f));
             model = glm::scale(model, glm::vec3(1.5f));
 
@@ -1403,42 +1499,44 @@ int main()
             }
         }
 
-        if (estadoHomPuente == 0) {
-            homPuentePosX += VELOCIDAD_HOM_PUENTE * deltaTime;
-            if (homPuentePosX >= HOM_PUENTE_FINAL_X) {
-                homPuentePosX = HOM_PUENTE_FINAL_X;
-                estadoHomPuente = 1;
-                tiempoGiroHomPuente = 0.0f;
-                anguloInicialHomPuente = anguloHomPuente;
-                anguloFinalHomPuente = 270.0f;
+        if (animarHombrePuente) {
+            if (estadoHomPuente == 0) {
+                homPuentePosX += VELOCIDAD_HOM_PUENTE * deltaTime;
+                if (homPuentePosX >= HOM_PUENTE_FINAL_X) {
+                    homPuentePosX = HOM_PUENTE_FINAL_X;
+                    estadoHomPuente = 1;
+                    tiempoGiroHomPuente = 0.0f;
+                    anguloInicialHomPuente = anguloHomPuente;
+                    anguloFinalHomPuente = 270.0f;
+                }
             }
-        }
-        else if (estadoHomPuente == 1) {
-            tiempoGiroHomPuente += deltaTime;
-            float progresoGiroPuente = glm::clamp(tiempoGiroHomPuente / DURACION_GIRO_HOM_PUENTE, 0.0f, 1.0f);
-            anguloHomPuente = glm::mix(anguloInicialHomPuente, anguloFinalHomPuente, progresoGiroPuente);
-            if (progresoGiroPuente >= 1.0f) {
-                anguloHomPuente = 270.0f;
-                estadoHomPuente = 2;
+            else if (estadoHomPuente == 1) {
+                tiempoGiroHomPuente += deltaTime;
+                float progresoGiroPuente = glm::clamp(tiempoGiroHomPuente / DURACION_GIRO_HOM_PUENTE, 0.0f, 1.0f);
+                anguloHomPuente = glm::mix(anguloInicialHomPuente, anguloFinalHomPuente, progresoGiroPuente);
+                if (progresoGiroPuente >= 1.0f) {
+                    anguloHomPuente = 270.0f;
+                    estadoHomPuente = 2;
+                }
             }
-        }
-        else if (estadoHomPuente == 2) {
-            homPuentePosX -= VELOCIDAD_HOM_PUENTE * deltaTime;
-            if (homPuentePosX <= HOM_PUENTE_INICIO_X) {
-                homPuentePosX = HOM_PUENTE_INICIO_X;
-                estadoHomPuente = 3;
-                tiempoGiroHomPuente = 0.0f;
-                anguloInicialHomPuente = anguloHomPuente;
-                anguloFinalHomPuente = 90.0f;
+            else if (estadoHomPuente == 2) {
+                homPuentePosX -= VELOCIDAD_HOM_PUENTE * deltaTime;
+                if (homPuentePosX <= HOM_PUENTE_INICIO_X) {
+                    homPuentePosX = HOM_PUENTE_INICIO_X;
+                    estadoHomPuente = 3;
+                    tiempoGiroHomPuente = 0.0f;
+                    anguloInicialHomPuente = anguloHomPuente;
+                    anguloFinalHomPuente = 90.0f;
+                }
             }
-        }
-        else if (estadoHomPuente == 3) {
-            tiempoGiroHomPuente += deltaTime;
-            float progresoGiroPuente = glm::clamp(tiempoGiroHomPuente / DURACION_GIRO_HOM_PUENTE, 0.0f, 1.0f);
-            anguloHomPuente = glm::mix(anguloInicialHomPuente, anguloFinalHomPuente, progresoGiroPuente);
-            if (progresoGiroPuente >= 1.0f) {
-                anguloHomPuente = 90.0f;
-                estadoHomPuente = 0;
+            else if (estadoHomPuente == 3) {
+                tiempoGiroHomPuente += deltaTime;
+                float progresoGiroPuente = glm::clamp(tiempoGiroHomPuente / DURACION_GIRO_HOM_PUENTE, 0.0f, 1.0f);
+                anguloHomPuente = glm::mix(anguloInicialHomPuente, anguloFinalHomPuente, progresoGiroPuente);
+                if (progresoGiroPuente >= 1.0f) {
+                    anguloHomPuente = 90.0f;
+                    estadoHomPuente = 0;
+                }
             }
         }
 
@@ -1537,7 +1635,7 @@ int main()
         matrizBaseBorracho = glm::rotate(matrizBaseBorracho, glm::radians(rotacionBaseBorracho), glm::vec3(0.0f, 1.0f, 0.0f));
         glm::vec3 posLocalHomB(homPuentePosX, 0.0f, 0.0f);
         glm::vec3 posRealHomB = glm::vec3(matrizBaseBorracho * glm::vec4(posLocalHomB, 1.0f));
-        bool mueveHomB = (estadoHomPuente == 0 || estadoHomPuente == 2);
+        bool mueveHomB = (animarHombrePuente && (estadoHomPuente == 0 || estadoHomPuente == 2));
         if (glm::distance(camera.GetPosition(), posRealHomB) < MAX_DIST) {
             if (mueveHomB) {
                 HomB.UpdateAnimation(deltaTime, HomB.GetScenePointer());
@@ -1737,6 +1835,8 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mode
         case GLFW_KEY_Z: animarHombreSaludo = !animarHombreSaludo; break;
         case GLFW_KEY_X: animarMujerSaludo = !animarMujerSaludo; break;
         case GLFW_KEY_B: animarBotes = !animarBotes; break;
+        case GLFW_KEY_0:
+        case GLFW_KEY_KP_0: animarHombrePuente = !animarHombrePuente; break;
         case GLFW_KEY_1: animarLinternasAvance = !animarLinternasAvance; break;
         case GLFW_KEY_2: animarLinternasBalanceo = !animarLinternasBalanceo; break;
 
