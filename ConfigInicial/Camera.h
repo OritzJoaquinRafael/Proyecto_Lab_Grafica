@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 // Std. Includes
 #include <vector>
@@ -80,6 +80,16 @@ public:
 		{
 			this->position += this->right * velocity;
 		}
+
+		// Limites del escenario para evitar que la camara salga del recorrido.
+		if (this->position.x < -110.0f) this->position.x = -110.0f;
+		if (this->position.x > 120.0f) this->position.x = 120.0f;
+
+		if (this->position.y < -8.7f) this->position.y = -8.7f;
+		if (this->position.y > 75.0f) this->position.y = 75.0f;
+
+		if (this->position.z < -145.0f) this->position.z = -145.0f;
+		if (this->position.z > 18.0f) this->position.z = 18.0f;
 	}
 
 	// Processes input received from a mouse input system. Expects the offset value in both the x and y direction.
