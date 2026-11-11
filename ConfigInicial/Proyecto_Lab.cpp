@@ -86,6 +86,22 @@ bool linternaEnAgua = false;
 glm::vec3 posLinternaAgua(0.0f);
 float progresoLinternaAgua = 0.0f;
 
+// --- Linterna 9: tope de tamaño, posición de la mano y soltado ---
+const float ESCALA_TORSO = 2.2f;          // la misma que usas en modelTorso
+const float ESCALA_MAX_LINTERNA = 1.5f;   // igual que las linternas del río
+const glm::vec3 OFFSET_MANO_LINTERNA(0.0f, -0.6f, 0.0f);
+float escalaLinternaAgua = ESCALA_MAX_LINTERNA;
+glm::mat4 matrizBrazoDerMundo(1.0f);      // se actualiza cada frame en main()
+
+void SoltarLinternaEnAgua() {
+    glm::vec3 mano = glm::vec3(matrizBrazoDerMundo * glm::vec4(OFFSET_MANO_LINTERNA, 1.0f));
+    posLinternaAgua = glm::vec3(mano.x, -9.8f, mano.z);   // bajo la mano, a nivel del agua
+    progresoLinternaAgua = 0.0f;
+    escalaLinternaAgua = (escalaLinterna9 > 0.01f) ? glm::min(escalaLinterna9, ESCALA_MAX_LINTERNA)
+        : ESCALA_MAX_LINTERNA;
+    linternaEnAgua = true;
+}
+
 // Estructura de Keyframes
 #define MAX_FRAMES 100
 int i_max_steps = 90; // Velocidad de transición entre frames
@@ -168,6 +184,10 @@ void interpolation(void) {
 void Animation() {
     if (play) {
         if (i_curr_steps >= i_max_steps) {
+            // Ya llegó al keyframe playIndex+1: si ahí la linterna va en el agua, se suelta desde la mano
+            if (KeyFrame[playIndex + 1].soltarAgua && !linternaEnAgua) {
+                SoltarLinternaEnAgua();
+            }
             playIndex++;
             if (playIndex >= FrameIndex - 1) {
                 std::cout << "Termina animacion" << std::endl;
@@ -177,13 +197,6 @@ void Animation() {
             else {
                 i_curr_steps = 0;
                 interpolation();
-
-                // Si en el siguiente frame la linterna se suelta al agua
-                if (KeyFrame[playIndex + 1].soltarAgua && !linternaEnAgua) {
-                    linternaEnAgua = true;
-                    posLinternaAgua = glm::vec3(posPersonaje.x, -9.8f, posPersonaje.z);
-                    progresoLinternaAgua = 0.0f;
-                }
             }
         }
         else {
@@ -1090,6 +1103,7 @@ int main()
         // 4. BRAZO DERECHO
         glm::mat4 modelBrazoD = glm::translate(modelTorso, glm::vec3(-0.24f, 0.44f, 0.0f));
         modelBrazoD = glm::rotate(modelBrazoD, glm::radians(anguloBrazoDerX), glm::vec3(1.0f, 0.0f, 0.0f));
+        matrizBrazoDerMundo = modelBrazoD;
         glUniformMatrix4fv(locModel, 1, GL_FALSE, glm::value_ptr(modelBrazoD));
         BrazoDer.Draw(lightingShader);
 
@@ -1112,9 +1126,11 @@ int main()
         glUniform1f(locBrilloLampara, pulsoLinterna9);
 
         // Si está en la mano creciendo (escala > 0 y NO en el agua)
-        if (escalaLinterna9 > 0.0f && !linternaEnAgua) {
-            glm::mat4 modelLinterna9 = glm::translate(modelBrazoD, glm::vec3(0.0f, -0.6f, 0.0f));
-            modelLinterna9 = glm::scale(modelLinterna9, glm::vec3(escalaLinterna9));
+        float escalaManoLinterna = glm::clamp(escalaLinterna9, 0.0f, ESCALA_MAX_LINTERNA);
+        if (escalaManoLinterna > 0.0f && !linternaEnAgua) {
+            glm::mat4 modelLinterna9 = glm::translate(modelBrazoD, OFFSET_MANO_LINTERNA);
+            // modelBrazoD ya trae la escala 2.2 del torso; se compensa para que el tamaño real sea escalaLinterna9
+            modelLinterna9 = glm::scale(modelLinterna9, glm::vec3(escalaManoLinterna / ESCALA_TORSO));
             glUniformMatrix4fv(locModel, 1, GL_FALSE, glm::value_ptr(modelLinterna9));
             Lin.Draw(lightingShader);
         }
@@ -1128,7 +1144,7 @@ int main()
 
             glm::mat4 modelLinterna9Agua = glm::translate(glm::mat4(1.0f), posFinalL9);
             modelLinterna9Agua = glm::rotate(modelLinterna9Agua, glm::radians(anguloBalanceoAgua), glm::vec3(0.0f, 0.0f, 1.0f));
-            modelLinterna9Agua = glm::scale(modelLinterna9Agua, glm::vec3(1.0f));
+            modelLinterna9Agua = glm::scale(modelLinterna9Agua, glm::vec3(escalaLinternaAgua));
 
             glUniformMatrix4fv(locModel, 1, GL_FALSE, glm::value_ptr(modelLinterna9Agua));
             Lin.Draw(lightingShader);
@@ -1657,9 +1673,8 @@ void DoMovement()
     if (keys[GLFW_KEY_9]) anguloPiernaDerX += 1.0f;
     if (keys[GLFW_KEY_0]) anguloPiernaDerX -= 1.0f;
 
-    // Escalar la Linterna
-    if (keys[GLFW_KEY_LEFT_BRACKET])  escalaLinterna9 -= 0.01f; // Tecla [
-    if (keys[GLFW_KEY_RIGHT_BRACKET]) escalaLinterna9 += 0.01f; // Tecla ]
+    if (keys[GLFW_KEY_LEFT_BRACKET])  escalaLinterna9 = glm::max(escalaLinterna9 - 0.01f, 0.0f);                 // Tecla [
+    if (keys[GLFW_KEY_RIGHT_BRACKET]) escalaLinterna9 = glm::min(escalaLinterna9 + 0.01f, ESCALA_MAX_LINTERNA);  // Tecla ]
 }
 
 void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mode)
@@ -1733,12 +1748,13 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mode
             break;
 
         case GLFW_KEY_COMMA: // Tecla ,
-            linternaEnAgua = true;
+            if (!linternaEnAgua) SoltarLinternaEnAgua();   // usa la posición real de la mano
             std::cout << "Marca: Soltar Linterna en el Agua" << std::endl;
             break;
 
         case GLFW_KEY_PERIOD: // Tecla .
             linternaEnAgua = false;
+            escalaLinterna9 = 0.0f;   // empieza en tamaño 0; con ] la inflas hasta 1.5
             std::cout << "Marca: Linterna sostenida" << std::endl;
             break;
         }
