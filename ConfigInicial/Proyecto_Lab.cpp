@@ -35,6 +35,7 @@
 
 // Function prototypes
 void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mode);
+void FramebufferSizeCallback(GLFWwindow* window, int width, int height);
 void MouseCallback(GLFWwindow* window, double xPos, double yPos);
 void DoMovement();
 void Animation();
@@ -757,7 +758,6 @@ int main()
     }
     glfwMakeContextCurrent(window);
     glfwSwapInterval(1); // VSync activado
-    glfwGetFramebufferSize(window, &SCREEN_WIDTH, &SCREEN_HEIGHT);
     glfwSetKeyCallback(window, KeyCallback);
     glfwSetCursorPosCallback(window, MouseCallback);
     glewExperimental = GL_TRUE;
@@ -766,6 +766,10 @@ int main()
         std::cout << "Failed to initialize GLEW" << std::endl;
         return EXIT_FAILURE;
     }
+
+    glfwSetFramebufferSizeCallback(window, FramebufferSizeCallback);
+    glfwMaximizeWindow(window);
+    glfwGetFramebufferSize(window, &SCREEN_WIDTH, &SCREEN_HEIGHT);
     glViewport(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
 
     // Shaders
@@ -898,6 +902,17 @@ int main()
         lastFrame = currentFrame;
 
         glfwPollEvents();
+
+        if (SCREEN_WIDTH > 0 && SCREEN_HEIGHT > 0)
+        {
+            projection = glm::perspective(
+                camera.GetZoom(),
+                (GLfloat)SCREEN_WIDTH / (GLfloat)SCREEN_HEIGHT,
+                1.0f,
+                1000.0f
+            );
+        }
+
         DoMovement();
         Animation();
 
@@ -1628,6 +1643,16 @@ int main()
 
     glfwTerminate();
     return 0;
+}
+
+void FramebufferSizeCallback(GLFWwindow* window, int width, int height)
+{
+    if (width == 0 || height == 0)
+        return;
+
+    SCREEN_WIDTH = width;
+    SCREEN_HEIGHT = height;
+    glViewport(0, 0, width, height);
 }
 
 void DoMovement()
