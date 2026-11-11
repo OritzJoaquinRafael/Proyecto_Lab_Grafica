@@ -697,6 +697,31 @@ int main()
         glfwPollEvents();
         DoMovement();
 
+        //  DETECCIÓN DE PROXIMIDAD Y TEXTOS INFORMATIVOS mediante (Gorin-to)
+        glm::vec3 posGor1(-45.0f, -3.6f, -32.0f);
+        glm::vec3 posGor2(45.0f, -3.6f, -32.0f);
+        glm::vec3 posGor3(-45.0f, -3.6f, -86.4f);
+        glm::vec3 posGor4(45.0f, -3.6f, -86.4f);
+
+        float radioDeteccion = 20.0f;
+        glm::vec3 posCam = camera.GetPosition();
+
+        if (glm::distance(posCam, posGor1) < radioDeteccion) {
+            glfwSetWindowTitle(window, "El Obon honra a los espiritus de los ancestros.");
+        }
+        else if (glm::distance(posCam, posGor2) < radioDeteccion) {
+            glfwSetWindowTitle(window, "La gente escribe deseos y mensajes para sus seres queridos en la linterna.");
+        }
+        else if (glm::distance(posCam, posGor3) < radioDeteccion) {
+            glfwSetWindowTitle(window, "Toro Nagashi: linternas despiden a los difuntos en paz.");
+        }
+        else if (glm::distance(posCam, posGor4) < radioDeteccion) {
+            glfwSetWindowTitle(window, "Gorin-to: monumento de los 5 elementos del budismo.");
+        }
+        else {
+            glfwSetWindowTitle(window, "Proyecto"); // Vuelve a la normalidad si te alejas
+        }
+
         if (animarBotes)
         {
             tiempoAnimacionBotes += glm::clamp(deltaTime, 0.0f, 0.05f);
