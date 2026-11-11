@@ -2,7 +2,7 @@
 // Ortiz Valles Joaquin Rafael y Juárez Osorio Josue Alexis
 // Fecha de entrega: 11/11/2026
 // Código unificado: Animación de recorrido + Skybox + Gestos (LUZ LUNA DINÁMICA) + Optimizaciones (4 Luces) + Control por Teclas.
-// Prueba
+// Pru
 
 #include <iostream>
 #include <cmath>
