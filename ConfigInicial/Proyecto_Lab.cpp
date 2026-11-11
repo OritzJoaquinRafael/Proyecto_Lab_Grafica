@@ -2,6 +2,7 @@
 // Ortiz Valles Joaquin Rafael y Juárez Osorio Josue Alexis
 // Fecha de entrega: 11/11/2026
 // Código unificado: Animación de recorrido + Skybox + Gestos (LUZ LUNA DINÁMICA) + Optimizaciones (4 Luces) + Control por Teclas.
+// Prueba
 
 #include <iostream>
 #include <cmath>
@@ -68,7 +69,7 @@ float tiempoAnimacionBotes = 0.0f;
 // ANIMACIÓN JERÁRQUICA Y SISTEMA DE KEYFRAMES (Linterna 9)
 // =======================================================================
 // Posición y rotación general del personaje entero
-glm::vec3 posPersonaje(-33.2f, -8.0f, 10.0f);
+glm::vec3 posPersonaje(-33.2f, -6.0f, 9.0f);
 float rotPersonajeY = 0.0f;
 
 // Ángulos de articulación 
