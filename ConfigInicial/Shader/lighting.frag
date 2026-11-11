@@ -70,7 +70,7 @@ void main()
     vec3 viewDir = normalize(viewPos - FragPos);
 
     // =====================================================================
-    // AGUA ANIMADA (compañero). Sale antes de calcular las luces normales.
+    // AGUA ANIMADA. Sale antes de calcular las luces normales.
     // =====================================================================
     if (isWater == 1 && transparency == 2)
     {
@@ -202,7 +202,7 @@ void main()
     }
 
     // =====================================================================
-    // RESTO DE MODELOS (tu código, sin cambios)
+    // RESTO DE MODELOS
     // =====================================================================
     vec3 result = CalcDirLight(dirLight, norm, viewDir);
 
