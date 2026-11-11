@@ -1645,40 +1645,55 @@ void DoMovement()
     // =====================================================
     // CONSTRUCCIÓN MANUAL DE KEYFRAMES (Tu Personaje)
     // =====================================================
+
+	// Control de posición del personaje
     if (keys[GLFW_KEY_T]) posPersonaje.x -= 0.05f;
     if (keys[GLFW_KEY_G]) posPersonaje.x += 0.05f;
+
+	// Control de altura del personaje
     if (keys[GLFW_KEY_Y]) posPersonaje.y += 0.05f;
     if (keys[GLFW_KEY_H]) posPersonaje.y -= 0.05f;
+
+	// Control de profundidad del personaje
     if (keys[GLFW_KEY_U]) posPersonaje.z -= 0.05f;
     if (keys[GLFW_KEY_J]) posPersonaje.z += 0.05f;
 
+	// Control de giro del personaje
     if (keys[GLFW_KEY_I]) rotPersonajeY += 1.0f;
     if (keys[GLFW_KEY_K]) rotPersonajeY -= 1.0f;
 
+    // Control Torso
     if (keys[GLFW_KEY_O]) anguloTorsoX += 1.0f;
     if (keys[GLFW_KEY_L]) anguloTorsoX -= 1.0f;
 
-    if (keys[GLFW_KEY_C]) anguloCabezaX += 1.0f;
-    if (keys[GLFW_KEY_V]) anguloCabezaX -= 1.0f;
+	// Control Cabeza
+    if (keys[GLFW_KEY_R]) anguloCabezaX += 1.0f;
+    if (keys[GLFW_KEY_F]) anguloCabezaX -= 1.0f;
 
-    if (keys[GLFW_KEY_3]) anguloBrazoIzqX += 1.0f;
-    if (keys[GLFW_KEY_4]) anguloBrazoIzqX -= 1.0f;
+	// Control Brazo Izquierdo
+    if (keys[GLFW_KEY_E]) anguloBrazoIzqX += 1.0f;
+    if (keys[GLFW_KEY_Q]) anguloBrazoIzqX -= 1.0f;
 
-    if (keys[GLFW_KEY_5]) anguloBrazoDerX += 1.0f;
-    if (keys[GLFW_KEY_6]) anguloBrazoDerX -= 1.0f;
+	// Control Brazo Derecho
+    if (keys[GLFW_KEY_B]) anguloBrazoDerX += 1.0f;
+    if (keys[GLFW_KEY_V]) anguloBrazoDerX -= 1.0f;
 
-    if (keys[GLFW_KEY_7]) anguloPiernaIzqX += 1.0f;
-    if (keys[GLFW_KEY_8]) anguloPiernaIzqX -= 1.0f;
+	// Control Pierna Izquierda
+    if (keys[GLFW_KEY_C]) anguloPiernaIzqX += 1.0f;
+    if (keys[GLFW_KEY_X]) anguloPiernaIzqX -= 1.0f;
 
-    if (keys[GLFW_KEY_9]) anguloPiernaDerX += 1.0f;
-    if (keys[GLFW_KEY_0]) anguloPiernaDerX -= 1.0f;
+	// Control Pierna Derecha
+    if (keys[GLFW_KEY_P]) anguloPiernaDerX += 1.0f;
+    if (keys[GLFW_KEY_Z]) anguloPiernaDerX -= 1.0f;
 
+	// Tamaño de la linterna
     if (keys[GLFW_KEY_LEFT_BRACKET])  escalaLinterna9 = glm::max(escalaLinterna9 - 0.01f, 0.0f);                 // Tecla [
     if (keys[GLFW_KEY_RIGHT_BRACKET]) escalaLinterna9 = glm::min(escalaLinterna9 + 0.01f, ESCALA_MAX_LINTERNA);  // Tecla ]
 }
 
 void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mode)
 {
+	// Cierra la ventana si se presiona ESC
     if (GLFW_KEY_ESCAPE == key && GLFW_PRESS == action)
         glfwSetWindowShouldClose(window, GL_TRUE);
     if (key >= 0 && key < 1024)
@@ -1688,14 +1703,20 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mode
         else if (action == GLFW_RELEASE)
             keys[key] = false;
     }
+
+	// Liberación del mouse
     if (key == GLFW_KEY_M && action == GLFW_PRESS)
         glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+
+	//Captura del mouse
     if (key == GLFW_KEY_N && action == GLFW_PRESS)
     {
         glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
         firstMouse = true;
     }
-    if (key == GLFW_KEY_P && action == GLFW_PRESS)
+
+    //Luna
+    if (key == GLFW_KEY_0 && action == GLFW_PRESS)
     {
         animarLuna = !animarLuna;
     }
@@ -1705,23 +1726,27 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mode
     {
         switch (key)
         {
-        case GLFW_KEY_Q: animarMujer1 = !animarMujer1; break;
-        case GLFW_KEY_E: animarMujer2 = !animarMujer2; break;
-        case GLFW_KEY_R: animarMujerSola = !animarMujerSola; break;
-        case GLFW_KEY_F: animarHombreDerecho = !animarHombreDerecho; break;
-        case GLFW_KEY_Z: animarHombreSaludo = !animarHombreSaludo; break;
-        case GLFW_KEY_X: animarMujerSaludo = !animarMujerSaludo; break;
-        case GLFW_KEY_B: animarBotes = !animarBotes; break;
-        case GLFW_KEY_1: animarLinternasAvance = !animarLinternasAvance; break;
-        case GLFW_KEY_2: animarLinternasBalanceo = !animarLinternasBalanceo; break;
+        case GLFW_KEY_1: animarMujer1 = !animarMujer1; break;
+        case GLFW_KEY_2: animarMujer2 = !animarMujer2; break;
+        case GLFW_KEY_3: animarMujerSola = !animarMujerSola; break;
+        case GLFW_KEY_4: animarHombreDerecho = !animarHombreDerecho; break;
+        case GLFW_KEY_5: animarHombreSaludo = !animarHombreSaludo; break;
+        case GLFW_KEY_6: animarMujerSaludo = !animarMujerSaludo; break;
+        case GLFW_KEY_7: animarBotes = !animarBotes; break;
+        case GLFW_KEY_8: animarLinternasAvance = !animarLinternasAvance; break;
+        case GLFW_KEY_9: animarLinternasBalanceo = !animarLinternasBalanceo; break;
 
-            // ===============================================
-            // SISTEMA DE KEYFRAMES 
-            // ===============================================
+
+        // ===============================================
+        // SISTEMA DE KEYFRAMES 
+        // ===============================================
+       
+		// Guardar keyframe
         case GLFW_KEY_F1:
             saveFrame();
             break;
 
+		// Reproducir animación
         case GLFW_KEY_F2:
             if (play == false && (FrameIndex > 1)) {
                 resetElements();
@@ -1735,26 +1760,31 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mode
             }
             break;
 
+		// Guardar animación en archivo
         case GLFW_KEY_F3:
             saveAnimationToFile();
             break;
 
+		// Cargar animación desde archivo
         case GLFW_KEY_F4:
             loadAnimationFromFile();
             break;
 
+		// Resetear elementos
         case GLFW_KEY_F5:
             resetElements();
             break;
 
+        //
         case GLFW_KEY_COMMA: // Tecla ,
-            if (!linternaEnAgua) SoltarLinternaEnAgua();   // usa la posición real de la mano
+            if (!linternaEnAgua) SoltarLinternaEnAgua();
             std::cout << "Marca: Soltar Linterna en el Agua" << std::endl;
             break;
 
+        //
         case GLFW_KEY_PERIOD: // Tecla .
             linternaEnAgua = false;
-            escalaLinterna9 = 0.0f;   // empieza en tamaño 0; con ] la inflas hasta 1.5
+            escalaLinterna9 = 0.0f;
             std::cout << "Marca: Linterna sostenida" << std::endl;
             break;
         }
