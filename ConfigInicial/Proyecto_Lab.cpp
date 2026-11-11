@@ -1,7 +1,7 @@
 ﻿// Proyecto
-// Ortiz Valles Joaquin Rafael y Ju�rez Osorio Josue Alexis
+// Ortiz Valles Joaquin Rafael y Ju rez Osorio Josue Alexis
 // Fecha de entrega: 11/11/2026
-// C�digo unificado: Animación de recorrido + Skybox + Gestos (LUZ LUNA DINIMICA) + Optimizaciones + Botes/Agua
+// C digo unificado: Animaci n de recorrido + Skybox + Gestos (LUZ LUNA NOTABLE Y DIN MICA) + Optimizaciones + Botes/Agua
 
 #include <iostream>
 #include <cmath>
@@ -47,35 +47,95 @@ GLfloat lastY = HEIGHT / 2.0;
 bool keys[1024];
 bool firstMouse = true;
 
+// Activacion individual de animaciones
+bool animarMujer1 = false;
+bool animarMujer2 = false;
+bool animarMujerSola = false;
+bool animarHombreDerecho = false;
+bool animarHombreSaludo = false;
+bool animarMujerSaludo = false;
+bool animarBotes = false;
+float tiempoAnimacionBotes = 0.0f;
+
 // Light attributes
 glm::vec3 lightPos(0.0f, 0.0f, 0.0f);
 bool active;
 
-// --- CONFIGURACIÓN DE LA LUNA ---
+// --- CONFIGURACI N DE LA LUNA (Tuya: Notable y Din mica) ---
 float radioLuna = 350.0f;       // Distancia desde el centro
 float alturaLuna = 100.0f;       // Altura en el cielo
-float movelightPos = 61.0f;      // Ángulo de posición inicial
-bool animarLuna = false;        // Empieza estática hasta presionar 'P'
+float movelightPos = 61.0f;      //  ngulo de posici n inicial
+bool animarLuna = false;        // Empieza est tica hasta presionar 'P'
 
 // --- SKYBOX TINT ---
 const glm::vec3 SKY_TINT(1.0f, 1.0f, 1.0f);
 
-// Variables globales para el recorrido GRUPAL (Muj1, Muj2, Hom2)
-float mujPos_Z = 0.0f;
+// Recorridos individuales de las dos mujeres
 const float VELOCIDAD_MUJ = 1.5f;
 const float DISTANCIA_MUJ = 40.0f;
 const float DURACION_GIRO_MUJ = 0.8f;
-bool mujRegresando = false;
-bool mujGirando = false;
-float tiempoGiroMuj = 0.0f;
-float anguloMuj = 0.0f;
-float anguloInicialMuj = 0.0f;
-float anguloFinalMuj = 0.0f;
 
-// Recorrido independiente de la MUJER QUE ESTÁ SOLA (Muj)
+struct RecorridoMujer
+{
+    float posicionZ = 0.0f;
+    bool regresando = false;
+    bool girando = false;
+    float tiempoGiro = 0.0f;
+    float angulo = 0.0f;
+    float anguloInicial = 0.0f;
+    float anguloFinal = 0.0f;
+};
+
+RecorridoMujer recorridoMujer1;
+RecorridoMujer recorridoMujer2;
+
+static void ActualizarRecorridoMujer(RecorridoMujer& mujer, float delta)
+{
+    if (!mujer.girando)
+    {
+        if (!mujer.regresando)
+        {
+            mujer.posicionZ += VELOCIDAD_MUJ * delta;
+            if (mujer.posicionZ >= DISTANCIA_MUJ)
+            {
+                mujer.posicionZ = DISTANCIA_MUJ;
+                mujer.girando = true;
+                mujer.tiempoGiro = 0.0f;
+                mujer.anguloInicial = mujer.angulo;
+                mujer.anguloFinal = 180.0f;
+            }
+        }
+        else
+        {
+            mujer.posicionZ -= VELOCIDAD_MUJ * delta;
+            if (mujer.posicionZ <= 0.0f)
+            {
+                mujer.posicionZ = 0.0f;
+                mujer.girando = true;
+                mujer.tiempoGiro = 0.0f;
+                mujer.anguloInicial = mujer.angulo;
+                mujer.anguloFinal = 0.0f;
+            }
+        }
+    }
+    if (mujer.girando)
+    {
+        mujer.tiempoGiro += delta;
+        float progreso = glm::clamp(mujer.tiempoGiro / DURACION_GIRO_MUJ, 0.0f, 1.0f);
+        mujer.angulo = glm::mix(mujer.anguloInicial, mujer.anguloFinal, progreso);
+        if (progreso >= 1.0f)
+        {
+            mujer.angulo = mujer.anguloFinal;
+            mujer.girando = false;
+            mujer.regresando = !mujer.regresando;
+        }
+    }
+}
+
+// Recorrido independiente de la MUJER QUE EST  SOLA (Muj)
 float mujSoloPos_Z = 0.0f;
 const float DISTANCIA_MUJ_SOLO = 68.0f;
-int estadoMujSolo = 0; // 0: camina, 1: gira al agua, 2: señala, 3: gira, 4: regresa, 5: gira al inicio
+int estadoMujSolo = 0; // 0: camina, 1: gira al agua, 2: se ala, 3: gira, 4: regresa, 5: gira al inicio
 float tiempoGiroMujSolo = 0.0f;
 float tiempoDetenidaMujSolo = 0.0f;
 float anguloMujSolo = 0.0f;
@@ -107,13 +167,13 @@ float anguloInicialHomPuente = 90.0f;
 float anguloFinalHomPuente = 270.0f;
 const float DURACION_GIRO_HOM_PUENTE = 0.8f;
 
-// Positions of the 5 static point lights (4 de tus edificios + 1 farol de tu compa�ero)
+// Positions of the 5 static point lights (4 de tus edificios + 1 farol de tu compa ero)
 glm::vec3 pointLightPositions[] = {
-    glm::vec3(-80.0f, 0.95f, 3.0f),    // Luz 0: Edificio Izquierdo 1
-    glm::vec3(-84.0f, 0.95f, -110.0f), // Luz 1: Edificio Izquierdo 4
-    glm::vec3(77.0f, 0.95f, 2.2f),     // Luz 2: Edificio Derecho 1
-    glm::vec3(90.0f, 0.95f, -121.0f),  // Luz 3: Edificio Derecho 3
-    glm::vec3(0.0f, 4.0f, 0.0f)        // Luz 4: Farol blanco
+    glm::vec3(-80.0f, 0.95f, 3.0f),    // Luz 0: Edificio Izquierdo 1 (Tuya)
+    glm::vec3(-84.0f, 0.95f, -110.0f), // Luz 1: Edificio Izquierdo 4 (Tuya)
+    glm::vec3(77.0f, 0.95f, 2.2f),     // Luz 2: Edificio Derecho 1 (Tuya)
+    glm::vec3(90.0f, 0.95f, -121.0f),  // Luz 3: Edificio Derecho 3 (Tuya)
+    glm::vec3(0.0f, 4.0f, 0.0f)        // Luz 4: Farol blanco (Compa ero)
 };
 
 float vertices[] = {
@@ -238,7 +298,7 @@ GLuint loadCubemap(std::vector<std::string> faces)
 }
 
 // =======================================================================
-// FUNCIONES DE CINEMÁTICA Y GESTOS
+// FUNCIONES DE CINEM TICA Y GESTOS
 // =======================================================================
 static glm::mat4 MatrizAssimp(const aiMatrix4x4& matriz)
 {
@@ -489,7 +549,7 @@ int main()
     // Init GLFW
     glfwInit();
 
-    // TU CONFIGURACIÓN DE VENTANA
+    // TU CONFIGURACI N DE VENTANA
     GLFWwindow* window = glfwCreateWindow(WIDTH, HEIGHT, "Proyecto", nullptr, nullptr);
 
     if (nullptr == window)
@@ -500,7 +560,7 @@ int main()
     }
 
     glfwMakeContextCurrent(window);
-    glfwSwapInterval(1); // OPTIMIZACIÓN: VSync activado para evitar sobrecalentamiento y picos de GPU en laptop
+    glfwSwapInterval(1); // OPTIMIZACI N TUYA: VSync activado para evitar sobrecalentamiento y picos de GPU en laptop
 
     glfwGetFramebufferSize(window, &SCREEN_WIDTH, &SCREEN_HEIGHT);
 
@@ -532,7 +592,7 @@ int main()
     Model Muj((char*)"Models/mujer.fbx", "mujer.png");
     Model Muj1((char*)"Models/mujer1.fbx", "mujer1.png");
     Model Muj2((char*)"Models/mujer2.fbx", "mujer2.png");
-    Model Agu((char*)"Models/agua.obj");
+    Model Agu((char*)"Models/agua.obj"); // Usaremos tu objeto y la animaci n shader de tu compa ero
     Model Gor((char*)"Models/gorin.obj");
     Model HomS((char*)"Models/homsal.fbx", "hombre.png");
     Model HomB((char*)"Models/hombor.fbx", "hombre1.png");
@@ -580,7 +640,7 @@ int main()
     GLuint cubemapTexture = loadCubemap(faces);
 
     // =======================================================================
-    // OPTIMIZACIÓN: UBICACIONES DE UNIFORMS EN SHADERS
+    // OPTIMIZACI N TUYA: CACH  DE UBICACIONES DE UNIFORMS EN SHADERS
     // =======================================================================
     lightingShader.Use();
     glUniform1i(glGetUniformLocation(lightingShader.Program, "Material.difuse"), 0);
@@ -595,7 +655,7 @@ int main()
     GLint locBrilloLampara = glGetUniformLocation(lightingShader.Program, "brilloLampara");
     GLint locBones = glGetUniformLocation(lightingShader.Program, "finalBoneMatrices[0]");
 
-    // Shader de agua
+    // Shader de agua (Compa ero)
     GLint locIsWater = glGetUniformLocation(lightingShader.Program, "isWater");
     GLint locTiempoAgua = glGetUniformLocation(lightingShader.Program, "tiempoAgua");
 
@@ -604,7 +664,7 @@ int main()
     GLint locDirLightDiff = glGetUniformLocation(lightingShader.Program, "dirLight.diffuse");
     GLint locDirLightSpec = glGetUniformLocation(lightingShader.Program, "dirLight.specular");
 
-    //LUCES
+    // FUSI N: Ahora soportaremos 7 luces (4 tuyas + 1 farol + 2 botes)
     struct PointLightLocs {
         GLint pos, amb, diff, spec, constant, linear, quad;
     } locPointLights[7];
@@ -620,7 +680,7 @@ int main()
         locPointLights[i].quad = glGetUniformLocation(lightingShader.Program, (prefix + "quadratic").c_str());
     }
 
-    // SpotLight
+    // SpotLight (Compa ero)
     GLint locSpotLightPos = glGetUniformLocation(lightingShader.Program, "spotLight.position");
     GLint locSpotLightDir = glGetUniformLocation(lightingShader.Program, "spotLight.direction");
 
@@ -648,21 +708,25 @@ int main()
         glfwPollEvents();
         DoMovement();
 
-        ActualizarBote(boteIzquierdo, deltaTime, currentFrame);
-        ActualizarBote(boteDerecho, deltaTime, currentFrame);
+        if (animarBotes)
+        {
+            tiempoAnimacionBotes += glm::clamp(deltaTime, 0.0f, 0.05f);
+            ActualizarBote(boteIzquierdo, deltaTime, tiempoAnimacionBotes);
+            ActualizarBote(boteDerecho, deltaTime, tiempoAnimacionBotes);
+        }
 
         glm::mat4 modeloBoteIzquierdo = CrearTransformacionFlotante(
             boteIzquierdo.posicion, glm::vec3(4.0f), boteIzquierdo.anguloY,
-            currentFrame, boteIzquierdo.faseBalanceo, glm::vec3(0.0f, 0.47f, 0.0f),
+            tiempoAnimacionBotes, boteIzquierdo.faseBalanceo, glm::vec3(0.0f, 0.47f, 0.0f),
             0.12f, 10.0f
         );
         glm::mat4 modeloBoteDerecho = CrearTransformacionFlotante(
             boteDerecho.posicion, glm::vec3(4.0f), boteDerecho.anguloY,
-            currentFrame, boteDerecho.faseBalanceo, glm::vec3(0.0f, 0.47f, 0.0f),
+            tiempoAnimacionBotes, boteDerecho.faseBalanceo, glm::vec3(0.0f, 0.47f, 0.0f),
             0.12f, 10.0f
         );
 
-        // Posiciones de las luces calidas de los botes
+        // Posiciones de las luces c lidas de los botes (Compa ero)
         glm::vec3 posicionLuzBoteIzquierdo = glm::vec3(modeloBoteIzquierdo * glm::vec4(0.0f, 0.78f, 0.0f, 1.0f));
         glm::vec3 posicionLuzBoteDerecho = glm::vec3(modeloBoteDerecho * glm::vec4(0.0f, 0.78f, 0.0f, 1.0f));
 
@@ -670,7 +734,7 @@ int main()
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         // =======================================================================
-        // 1. CONFIGURAR LUCES Y SHADER PRINCIPAL DE ILUMINACI�N
+        // 1. CONFIGURAR LUCES Y SHADER PRINCIPAL DE ILUMINACI N
         // =======================================================================
         glEnable(GL_DEPTH_TEST);
         lightingShader.Use();
@@ -678,15 +742,15 @@ int main()
         glUniform1i(locIsWater, 0); // Por defecto no es agua
         glUniform3f(locViewPos, camera.GetPosition().x, camera.GetPosition().y, camera.GetPosition().z);
 
-        // --- MATEMÁTICA Y POSICIÓN DE LA LUNA ---
+        // --- MATEM TICA Y POSICI N DE LA LUNA (Tuya) ---
         if (animarLuna) {
-            movelightPos += 0.15f * deltaTime; // Animación con 'P'
+            movelightPos += 0.15f * deltaTime; // Animaci n con 'P'
         }
         float lunaX = radioLuna * cos(movelightPos);
         float lunaZ = radioLuna * sin(movelightPos);
         glm::vec3 posicionLuna(lunaX, alturaLuna, lunaZ);
 
-        // --- LUZ DIRECCIONAL DE LUNA (MÁS NOTABLE) ---
+        // --- LUZ DIRECCIONAL DE LUNA (M S NOTABLE - TUYA) ---
         glm::vec3 dirLuna = glm::normalize(-posicionLuna);
         glUniform3f(locDirLightDir, dirLuna.x, dirLuna.y, dirLuna.z);
         glUniform3f(locDirLightAmb, 0.12f, 0.15f, 0.22f);
@@ -694,7 +758,7 @@ int main()
         glUniform3f(locDirLightSpec, 0.45f, 0.50f, 0.65f);
 
         // --- LAS 7 LUCES PUNTUALES ---
-        // Luz 0: Edificio Izquierdo 1
+        // Luz 0: Edificio Izquierdo 1 (Tuya)
         glUniform3f(locPointLights[0].pos, pointLightPositions[0].x, pointLightPositions[0].y, pointLightPositions[0].z);
         glUniform3f(locPointLights[0].amb, 0.08f, 0.04f, 0.01f);
         glUniform3f(locPointLights[0].diff, 1.0f, 0.6f, 0.1f);
@@ -703,7 +767,7 @@ int main()
         glUniform1f(locPointLights[0].linear, 0.007f);
         glUniform1f(locPointLights[0].quad, 0.0002f);
 
-        // Luz 1: Edificio Izquierdo 4
+        // Luz 1: Edificio Izquierdo 4 (Tuya)
         glUniform3f(locPointLights[1].pos, pointLightPositions[1].x, pointLightPositions[1].y, pointLightPositions[1].z);
         glUniform3f(locPointLights[1].amb, 0.08f, 0.04f, 0.01f);
         glUniform3f(locPointLights[1].diff, 1.0f, 0.6f, 0.1f);
@@ -712,7 +776,7 @@ int main()
         glUniform1f(locPointLights[1].linear, 0.007f);
         glUniform1f(locPointLights[1].quad, 0.0002f);
 
-        // Luz 2: Edificio Derecho 1
+        // Luz 2: Edificio Derecho 1 (Tuya)
         glUniform3f(locPointLights[2].pos, pointLightPositions[2].x, pointLightPositions[2].y, pointLightPositions[2].z);
         glUniform3f(locPointLights[2].amb, 0.08f, 0.04f, 0.01f);
         glUniform3f(locPointLights[2].diff, 1.0f, 0.6f, 0.1f);
@@ -721,7 +785,7 @@ int main()
         glUniform1f(locPointLights[2].linear, 0.007f);
         glUniform1f(locPointLights[2].quad, 0.0002f);
 
-        // Luz 3: Edificio Derecho 3
+        // Luz 3: Edificio Derecho 3 (Tuya)
         glUniform3f(locPointLights[3].pos, pointLightPositions[3].x, pointLightPositions[3].y, pointLightPositions[3].z);
         glUniform3f(locPointLights[3].amb, 0.08f, 0.04f, 0.01f);
         glUniform3f(locPointLights[3].diff, 1.0f, 0.6f, 0.1f);
@@ -730,7 +794,7 @@ int main()
         glUniform1f(locPointLights[3].linear, 0.007f);
         glUniform1f(locPointLights[3].quad, 0.0002f);
 
-        // Luz 4: Farol Blanco
+        // Luz 4: Farol Blanco (Compa ero)
         glUniform3f(locPointLights[4].pos, pointLightPositions[4].x, pointLightPositions[4].y, pointLightPositions[4].z);
         glUniform3f(locPointLights[4].amb, 0.1f, 0.1f, 0.1f);
         glUniform3f(locPointLights[4].diff, 0.9f, 0.9f, 0.8f);
@@ -739,7 +803,7 @@ int main()
         glUniform1f(locPointLights[4].linear, 0.09f);
         glUniform1f(locPointLights[4].quad, 0.032f);
 
-        // Luz 5: Bote de almas Izquierdo
+        // Luz 5: Bote de almas Izquierdo (Compa ero)
         glUniform3f(locPointLights[5].pos, posicionLuzBoteIzquierdo.x, posicionLuzBoteIzquierdo.y, posicionLuzBoteIzquierdo.z);
         glUniform3f(locPointLights[5].amb, 0.045f, 0.022f, 0.008f);
         glUniform3f(locPointLights[5].diff, 1.0f, 0.58f, 0.24f);
@@ -748,7 +812,7 @@ int main()
         glUniform1f(locPointLights[5].linear, 0.08f);
         glUniform1f(locPointLights[5].quad, 0.02f);
 
-        // Luz 6: Bote de almas Derecho
+        // Luz 6: Bote de almas Derecho (Compa ero)
         glUniform3f(locPointLights[6].pos, posicionLuzBoteDerecho.x, posicionLuzBoteDerecho.y, posicionLuzBoteDerecho.z);
         glUniform3f(locPointLights[6].amb, 0.045f, 0.022f, 0.008f);
         glUniform3f(locPointLights[6].diff, 1.0f, 0.58f, 0.24f);
@@ -757,7 +821,7 @@ int main()
         glUniform1f(locPointLights[6].linear, 0.08f);
         glUniform1f(locPointLights[6].quad, 0.02f);
 
-        // Spotlight
+        // Spotlight del compa ero
         glUniform3f(locSpotLightPos, camera.GetPosition().x, camera.GetPosition().y, camera.GetPosition().z);
         glUniform3f(locSpotLightDir, camera.GetFront().x, camera.GetFront().y, camera.GetFront().z);
 
@@ -770,17 +834,17 @@ int main()
         glm::mat4 model = glm::mat4(1.0f);
 
         // =======================================================================
-        // 2. DIBUJO DE MODELOS ESTÁTICOS
+        // 2. DIBUJO DE MODELOS EST TICOS
         // =======================================================================
 
-        // 1. Árbol Izquierdo
+        // 1.  rbol Izquierdo
         model = glm::translate(glm::mat4(1.0f), glm::vec3(-45.0f, -3.5f, -60.0f));
         model = glm::scale(model, glm::vec3(10.0f));
         glUniformMatrix4fv(locModel, 1, GL_FALSE, glm::value_ptr(model));
         glUniform1i(locTransparency, 0);
         arb.Draw(lightingShader);
 
-        // 1.1 Árbol Derecho
+        // 1.1  rbol Derecho
         model = glm::translate(glm::mat4(1.0f), glm::vec3(45.0f, -3.5f, -60.0f));
         model = glm::scale(model, glm::vec3(10.0f));
         glUniformMatrix4fv(locModel, 1, GL_FALSE, glm::value_ptr(model));
@@ -933,7 +997,7 @@ int main()
         glUniform1i(locTransparency, 0);
         Edi3.Draw(lightingShader);
 
-        // 11 Luna
+        // 11 Luna (Tuya)
         model = glm::translate(glm::mat4(1.0f), posicionLuna);
         float anguloLunaY = atan2(posicionLuna.x, posicionLuna.z);
         model = glm::rotate(model, anguloLunaY, glm::vec3(0.0f, 1.0f, 0.0f));
@@ -943,188 +1007,158 @@ int main()
         Luna.Draw(lightingShader);
 
         // ======================================================================================
-        // LOGICA DE RECORRIDOS Y RECORRIDO GRUPAL
+        // L GICA DE RECORRIDOS Y RECORRIDO GRUPAL
         // ======================================================================================
-        if (!mujGirando)
-        {
-            if (!mujRegresando)
-            {
-                mujPos_Z += VELOCIDAD_MUJ * deltaTime;
+        if (animarMujer1)
+            ActualizarRecorridoMujer(recorridoMujer1, deltaTime);
+        if (animarMujer2)
+            ActualizarRecorridoMujer(recorridoMujer2, deltaTime);
 
-                if (mujPos_Z >= DISTANCIA_MUJ)
+        if (animarMujerSola)
+        {
+            // Muj Solo
+            if (estadoMujSolo == 0)
+            {
+                mujSoloPos_Z += VELOCIDAD_MUJ * deltaTime;
+
+                if (mujSoloPos_Z >= DISTANCIA_MUJ_SOLO)
                 {
-                    mujPos_Z = DISTANCIA_MUJ;
-                    mujGirando = true;
-                    tiempoGiroMuj = 0.0f;
-                    anguloInicialMuj = anguloMuj;
-                    anguloFinalMuj = 180.0f;
+                    mujSoloPos_Z = DISTANCIA_MUJ_SOLO;
+                    estadoMujSolo = 1;
+                    tiempoGiroMujSolo = 0.0f;
+                    anguloInicialMujSolo = anguloMujSolo;
+                    anguloFinalMujSolo = 90.0f;
                 }
             }
-            else
+            else if (estadoMujSolo == 1)
             {
-                mujPos_Z -= VELOCIDAD_MUJ * deltaTime;
+                tiempoGiroMujSolo += deltaTime;
+                float progresoGiroSolo = glm::clamp(tiempoGiroMujSolo / DURACION_GIRO_MUJ, 0.0f, 1.0f);
+                anguloMujSolo = glm::mix(anguloInicialMujSolo, anguloFinalMujSolo, progresoGiroSolo);
 
-                if (mujPos_Z <= 0.0f)
+                if (progresoGiroSolo >= 1.0f)
                 {
-                    mujPos_Z = 0.0f;
-                    mujGirando = true;
-                    tiempoGiroMuj = 0.0f;
-                    anguloInicialMuj = anguloMuj;
-                    anguloFinalMuj = 0.0f;
+                    anguloMujSolo = anguloFinalMujSolo;
+                    estadoMujSolo = 2;
+                    tiempoDetenidaMujSolo = 0.0f;
                 }
             }
-        }
-        if (mujGirando)
-        {
-            tiempoGiroMuj += deltaTime;
-            float progresoGiro = glm::clamp(tiempoGiroMuj / DURACION_GIRO_MUJ, 0.0f, 1.0f);
-            anguloMuj = glm::mix(anguloInicialMuj, anguloFinalMuj, progresoGiro);
-
-            if (progresoGiro >= 1.0f)
+            else if (estadoMujSolo == 2)
             {
-                anguloMuj = anguloFinalMuj;
-                mujGirando = false;
-                mujRegresando = !mujRegresando;
+                if (gestoMujSolo < 1.0f)
+                    gestoMujSolo = glm::min(gestoMujSolo + deltaTime / 0.8f, 1.0f);
+                else
+                    tiempoDetenidaMujSolo += deltaTime;
+
+                if (tiempoDetenidaMujSolo >= 10.0f)
+                {
+                    estadoMujSolo = 3;
+                    tiempoGiroMujSolo = 0.0f;
+                    anguloInicialMujSolo = anguloMujSolo;
+                    anguloFinalMujSolo = 180.0f;
+                }
             }
-        }
-
-        // Muj Solo
-        if (estadoMujSolo == 0)
-        {
-            mujSoloPos_Z += VELOCIDAD_MUJ * deltaTime;
-
-            if (mujSoloPos_Z >= DISTANCIA_MUJ_SOLO)
+            else if (estadoMujSolo == 3)
             {
-                mujSoloPos_Z = DISTANCIA_MUJ_SOLO;
-                estadoMujSolo = 1;
-                tiempoGiroMujSolo = 0.0f;
-                anguloInicialMujSolo = anguloMujSolo;
-                anguloFinalMujSolo = 90.0f;
-            }
-        }
-        else if (estadoMujSolo == 1)
-        {
-            tiempoGiroMujSolo += deltaTime;
-            float progresoGiroSolo = glm::clamp(tiempoGiroMujSolo / DURACION_GIRO_MUJ, 0.0f, 1.0f);
-            anguloMujSolo = glm::mix(anguloInicialMujSolo, anguloFinalMujSolo, progresoGiroSolo);
+                tiempoGiroMujSolo += deltaTime;
+                gestoMujSolo = glm::max(gestoMujSolo - deltaTime / DURACION_GIRO_MUJ, 0.0f);
+                float progresoGiroSolo = glm::clamp(tiempoGiroMujSolo / DURACION_GIRO_MUJ, 0.0f, 1.0f);
+                anguloMujSolo = glm::mix(anguloInicialMujSolo, anguloFinalMujSolo, progresoGiroSolo);
 
-            if (progresoGiroSolo >= 1.0f)
-            {
-                anguloMujSolo = anguloFinalMujSolo;
-                estadoMujSolo = 2;
-                tiempoDetenidaMujSolo = 0.0f;
+                if (progresoGiroSolo >= 1.0f)
+                {
+                    anguloMujSolo = anguloFinalMujSolo;
+                    estadoMujSolo = 4;
+                }
             }
-        }
-        else if (estadoMujSolo == 2)
-        {
-            if (gestoMujSolo < 1.0f)
-                gestoMujSolo = glm::min(gestoMujSolo + deltaTime / 0.8f, 1.0f);
-            else
-                tiempoDetenidaMujSolo += deltaTime;
+            else if (estadoMujSolo == 4)
+            {
+                mujSoloPos_Z -= VELOCIDAD_MUJ * deltaTime;
 
-            if (tiempoDetenidaMujSolo >= 10.0f)
-            {
-                estadoMujSolo = 3;
-                tiempoGiroMujSolo = 0.0f;
-                anguloInicialMujSolo = anguloMujSolo;
-                anguloFinalMujSolo = 180.0f;
+                if (mujSoloPos_Z <= 0.0f)
+                {
+                    mujSoloPos_Z = 0.0f;
+                    estadoMujSolo = 5;
+                    tiempoGiroMujSolo = 0.0f;
+                    anguloInicialMujSolo = anguloMujSolo;
+                    anguloFinalMujSolo = 0.0f;
+                }
             }
-        }
-        else if (estadoMujSolo == 3)
-        {
-            tiempoGiroMujSolo += deltaTime;
-            gestoMujSolo = glm::max(gestoMujSolo - deltaTime / DURACION_GIRO_MUJ, 0.0f);
-            float progresoGiroSolo = glm::clamp(tiempoGiroMujSolo / DURACION_GIRO_MUJ, 0.0f, 1.0f);
-            anguloMujSolo = glm::mix(anguloInicialMujSolo, anguloFinalMujSolo, progresoGiroSolo);
+            else if (estadoMujSolo == 5)
+            {
+                tiempoGiroMujSolo += deltaTime;
+                float progresoGiroSolo = glm::clamp(tiempoGiroMujSolo / DURACION_GIRO_MUJ, 0.0f, 1.0f);
+                anguloMujSolo = glm::mix(anguloInicialMujSolo, anguloFinalMujSolo, progresoGiroSolo);
 
-            if (progresoGiroSolo >= 1.0f)
-            {
-                anguloMujSolo = anguloFinalMujSolo;
-                estadoMujSolo = 4;
+                if (progresoGiroSolo >= 1.0f)
+                {
+                    anguloMujSolo = 0.0f;
+                    mujSoloPos_Z = 0.0f;
+                    gestoMujSolo = 0.0f;
+                    tiempoDetenidaMujSolo = 0.0f;
+                    estadoMujSolo = 0;
+                }
             }
-        }
-        else if (estadoMujSolo == 4)
-        {
-            mujSoloPos_Z -= VELOCIDAD_MUJ * deltaTime;
 
-            if (mujSoloPos_Z <= 0.0f)
-            {
-                mujSoloPos_Z = 0.0f;
-                estadoMujSolo = 5;
-                tiempoGiroMujSolo = 0.0f;
-                anguloInicialMujSolo = anguloMujSolo;
-                anguloFinalMujSolo = 0.0f;
-            }
-        }
-        else if (estadoMujSolo == 5)
-        {
-            tiempoGiroMujSolo += deltaTime;
-            float progresoGiroSolo = glm::clamp(tiempoGiroMujSolo / DURACION_GIRO_MUJ, 0.0f, 1.0f);
-            anguloMujSolo = glm::mix(anguloInicialMujSolo, anguloFinalMujSolo, progresoGiroSolo);
-
-            if (progresoGiroSolo >= 1.0f)
-            {
-                anguloMujSolo = 0.0f;
-                mujSoloPos_Z = 0.0f;
-                gestoMujSolo = 0.0f;
-                tiempoDetenidaMujSolo = 0.0f;
-                estadoMujSolo = 0;
-            }
         }
 
         // Hombre Derecho
-        if (estadoHomDerecho == 0)
+        if (animarHombreDerecho)
         {
-            homDerechoPosZ += VELOCIDAD_HOM_DERECHO * deltaTime;
-
-            if (homDerechoPosZ >= DISTANCIA_HOM_DERECHO)
+            if (estadoHomDerecho == 0)
             {
-                homDerechoPosZ = DISTANCIA_HOM_DERECHO;
-                estadoHomDerecho = 1;
-                tiempoGiroHomDerecho = 0.0f;
-                anguloInicialHomDerecho = anguloHomDerecho;
-                anguloFinalHomDerecho = 360.0f;
-            }
-        }
-        else if (estadoHomDerecho == 1)
-        {
-            tiempoGiroHomDerecho += deltaTime;
-            float progresoGiroHomDerecho = glm::clamp(tiempoGiroHomDerecho / DURACION_GIRO_HOM_DERECHO, 0.0f, 1.0f);
-            anguloHomDerecho = glm::mix(anguloInicialHomDerecho, anguloFinalHomDerecho, progresoGiroHomDerecho);
+                homDerechoPosZ += VELOCIDAD_HOM_DERECHO * deltaTime;
 
-            if (progresoGiroHomDerecho >= 1.0f)
+                if (homDerechoPosZ >= DISTANCIA_HOM_DERECHO)
+                {
+                    homDerechoPosZ = DISTANCIA_HOM_DERECHO;
+                    estadoHomDerecho = 1;
+                    tiempoGiroHomDerecho = 0.0f;
+                    anguloInicialHomDerecho = anguloHomDerecho;
+                    anguloFinalHomDerecho = 360.0f;
+                }
+            }
+            else if (estadoHomDerecho == 1)
             {
-                anguloHomDerecho = 360.0f;
-                estadoHomDerecho = 2;
-            }
-        }
-        else if (estadoHomDerecho == 2)
-        {
-            homDerechoPosZ -= VELOCIDAD_HOM_DERECHO * deltaTime;
+                tiempoGiroHomDerecho += deltaTime;
+                float progresoGiroHomDerecho = glm::clamp(tiempoGiroHomDerecho / DURACION_GIRO_HOM_DERECHO, 0.0f, 1.0f);
+                anguloHomDerecho = glm::mix(anguloInicialHomDerecho, anguloFinalHomDerecho, progresoGiroHomDerecho);
 
-            if (homDerechoPosZ <= 0.0f)
+                if (progresoGiroHomDerecho >= 1.0f)
+                {
+                    anguloHomDerecho = 360.0f;
+                    estadoHomDerecho = 2;
+                }
+            }
+            else if (estadoHomDerecho == 2)
             {
-                homDerechoPosZ = 0.0f;
-                estadoHomDerecho = 3;
-                tiempoGiroHomDerecho = 0.0f;
-                anguloInicialHomDerecho = anguloHomDerecho;
-                anguloFinalHomDerecho = 180.0f;
-            }
-        }
-        else if (estadoHomDerecho == 3)
-        {
-            tiempoGiroHomDerecho += deltaTime;
-            float progresoGiroHomDerecho = glm::clamp(tiempoGiroHomDerecho / DURACION_GIRO_HOM_DERECHO, 0.0f, 1.0f);
-            anguloHomDerecho = glm::mix(anguloInicialHomDerecho, anguloFinalHomDerecho, progresoGiroHomDerecho);
+                homDerechoPosZ -= VELOCIDAD_HOM_DERECHO * deltaTime;
 
-            if (progresoGiroHomDerecho >= 1.0f)
+                if (homDerechoPosZ <= 0.0f)
+                {
+                    homDerechoPosZ = 0.0f;
+                    estadoHomDerecho = 3;
+                    tiempoGiroHomDerecho = 0.0f;
+                    anguloInicialHomDerecho = anguloHomDerecho;
+                    anguloFinalHomDerecho = 180.0f;
+                }
+            }
+            else if (estadoHomDerecho == 3)
             {
-                anguloHomDerecho = 180.0f;
-                estadoHomDerecho = 0;
+                tiempoGiroHomDerecho += deltaTime;
+                float progresoGiroHomDerecho = glm::clamp(tiempoGiroHomDerecho / DURACION_GIRO_HOM_DERECHO, 0.0f, 1.0f);
+                anguloHomDerecho = glm::mix(anguloInicialHomDerecho, anguloFinalHomDerecho, progresoGiroHomDerecho);
+
+                if (progresoGiroHomDerecho >= 1.0f)
+                {
+                    anguloHomDerecho = 180.0f;
+                    estadoHomDerecho = 0;
+                }
             }
+
         }
 
-        // Hombre Puente
+        // Hombre Puente (se conserva automatico)
         if (estadoHomPuente == 0)
         {
             homPuentePosX += VELOCIDAD_HOM_PUENTE * deltaTime;
@@ -1177,14 +1211,13 @@ int main()
         }
 
         // ======================================================================================
-        // 3. DIBUJO DE MODELOS ANIMADOS
+        // 3. DIBUJO DE MODELOS ANIMADOS (OPTIMIZACI N TUYA: ENV O MASIVO DE MATRICES)
         // ======================================================================================
 
-        // 9. Mujer Sola (con gesto cinemático)
-        if (estadoMujSolo == 0 || estadoMujSolo == 4)
-            Muj.UpdateAnimation(deltaTime, Muj.GetScenePointer());
-        else
-            Muj.UpdateAnimation(0.0f, Muj.GetScenePointer());
+        // 9. Mujer Sola (con gesto cinem tico)
+        Muj.UpdateAnimation(
+            (animarMujerSola && (estadoMujSolo == 0 || estadoMujSolo == 4)) ? deltaTime : 0.0f,
+            Muj.GetScenePointer());
 
         std::vector<glm::mat4> transformsMujSolo = Muj.GetFinalBoneMatrices();
         AplicarGestoBrazo(Muj, transformsMujSolo, gestoMujSolo);
@@ -1199,31 +1232,31 @@ int main()
         Muj.Draw(lightingShader);
 
         // 10. Mujer1
-        Muj1.UpdateAnimation(mujGirando ? 0.0f : deltaTime, Muj1.GetScenePointer());
+        Muj1.UpdateAnimation((animarMujer1 && !recorridoMujer1.girando) ? deltaTime : 0.0f, Muj1.GetScenePointer());
         std::vector<glm::mat4> transforms = Muj1.GetFinalBoneMatrices();
         if (!transforms.empty()) {
             glUniformMatrix4fv(locBones, (GLsizei)transforms.size(), GL_FALSE, glm::value_ptr(transforms[0]));
         }
-        modelAnim = glm::translate(glm::mat4(1.0f), glm::vec3(30.0f, -7.8f, -100.0f + mujPos_Z));
-        modelAnim = glm::rotate(modelAnim, glm::radians(anguloMuj), glm::vec3(0.0f, 1.0f, 0.0f));
+        modelAnim = glm::translate(glm::mat4(1.0f), glm::vec3(30.0f, -7.8f, -100.0f + recorridoMujer1.posicionZ));
+        modelAnim = glm::rotate(modelAnim, glm::radians(recorridoMujer1.angulo), glm::vec3(0.0f, 1.0f, 0.0f));
         modelAnim = glm::scale(modelAnim, glm::vec3(2.0f));
         glUniformMatrix4fv(locModel, 1, GL_FALSE, glm::value_ptr(modelAnim));
         Muj1.Draw(lightingShader);
 
         // 11. Mujer2
-        Muj2.UpdateAnimation(mujGirando ? 0.0f : deltaTime, Muj2.GetScenePointer());
+        Muj2.UpdateAnimation((animarMujer2 && !recorridoMujer2.girando) ? deltaTime : 0.0f, Muj2.GetScenePointer());
         transforms = Muj2.GetFinalBoneMatrices();
         if (!transforms.empty()) {
             glUniformMatrix4fv(locBones, (GLsizei)transforms.size(), GL_FALSE, glm::value_ptr(transforms[0]));
         }
-        modelAnim = glm::translate(glm::mat4(1.0f), glm::vec3(34.0f, -7.8f, -100.0f + mujPos_Z));
-        modelAnim = glm::rotate(modelAnim, glm::radians(anguloMuj), glm::vec3(0.0f, 1.0f, 0.0f));
+        modelAnim = glm::translate(glm::mat4(1.0f), glm::vec3(34.0f, -7.8f, -100.0f + recorridoMujer2.posicionZ));
+        modelAnim = glm::rotate(modelAnim, glm::radians(recorridoMujer2.angulo), glm::vec3(0.0f, 1.0f, 0.0f));
         modelAnim = glm::scale(modelAnim, glm::vec3(2.0f));
         glUniformMatrix4fv(locModel, 1, GL_FALSE, glm::value_ptr(modelAnim));
         Muj2.Draw(lightingShader);
 
         // 14. Hombre2
-        Hom2.UpdateAnimation((estadoHomDerecho == 0 || estadoHomDerecho == 2) ? deltaTime : 0.0f, Hom2.GetScenePointer());
+        Hom2.UpdateAnimation((animarHombreDerecho && (estadoHomDerecho == 0 || estadoHomDerecho == 2)) ? deltaTime : 0.0f, Hom2.GetScenePointer());
         transforms = Hom2.GetFinalBoneMatrices();
         if (!transforms.empty()) {
             glUniformMatrix4fv(locBones, (GLsizei)transforms.size(), GL_FALSE, glm::value_ptr(transforms[0]));
@@ -1235,7 +1268,7 @@ int main()
         Hom2.Draw(lightingShader);
 
         // 15. Hombre Saludando
-        HomS.UpdateAnimation(deltaTime, HomS.GetScenePointer());
+        HomS.UpdateAnimation(animarHombreSaludo ? deltaTime : 0.0f, HomS.GetScenePointer());
         transforms = HomS.GetFinalBoneMatrices();
         if (!transforms.empty()) {
             glUniformMatrix4fv(locBones, (GLsizei)transforms.size(), GL_FALSE, glm::value_ptr(transforms[0]));
@@ -1258,7 +1291,7 @@ int main()
         HomB.Draw(lightingShader);
 
         // 17. Mujer Saludando
-        MujS.UpdateAnimation(deltaTime, MujS.GetScenePointer());
+        MujS.UpdateAnimation(animarMujerSaludo ? deltaTime : 0.0f, MujS.GetScenePointer());
         transforms = MujS.GetFinalBoneMatrices();
         if (!transforms.empty()) {
             glUniformMatrix4fv(locBones, (GLsizei)transforms.size(), GL_FALSE, glm::value_ptr(transforms[0]));
@@ -1271,7 +1304,7 @@ int main()
         glBindVertexArray(0);
 
         // =======================================================================
-        // 4. DIBUJAR LÁMPARAS Y BOTES 
+        // 4. DIBUJAR L MPARAS Y BOTES 
         // =======================================================================
         lampShader.Use();
         glUniformMatrix4fv(locLampView, 1, GL_FALSE, glm::value_ptr(view));
@@ -1287,7 +1320,7 @@ int main()
             glDrawArrays(GL_TRIANGLES, 0, 36);
         }
 
-        // Fuentes de luz calida sobre los botes
+        // Fuentes visibles de luz c lida sobre los botes (Compa ero)
         float intensidadLlama = 0.96f + 0.04f * sin(currentFrame * 7.0f);
         glUniform3f(locLampColor, intensidadLlama, 0.84f * intensidadLlama, 0.22f * intensidadLlama);
 
@@ -1304,7 +1337,7 @@ int main()
         glBindVertexArray(0);
 
         // =======================================================================
-        // 5. OPTIMIZACIÓN: SKYBOX DIBUJADO AL FINAL
+        // 5. OPTIMIZACI N TUYA: SKYBOX DIBUJADO AL FINAL (SIN OVERDRAW EN GPU)
         // =======================================================================
         glDepthFunc(GL_LEQUAL);
         skyboxShader.Use();
@@ -1322,11 +1355,11 @@ int main()
         glDepthFunc(GL_LESS);
 
         // =======================================================================
-        // 6. AGUA
+        // 6. FUSI N: AGUA DEL COMPA ERO Y LA TUYA COMBINADAS 
         // =======================================================================
         lightingShader.Use();
 
-        // Efecto del Shader animado
+        // Efecto del compa ero (Shader animado)
         lightingShader.Use();
 
         model = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, -9.748f, -60.0f));
@@ -1406,6 +1439,20 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mode
     if (key == GLFW_KEY_P && action == GLFW_PRESS)
     {
         animarLuna = !animarLuna;
+    }
+
+    if (action == GLFW_PRESS)
+    {
+        switch (key)
+        {
+        case GLFW_KEY_Q: animarMujer1 = !animarMujer1; break;
+        case GLFW_KEY_E: animarMujer2 = !animarMujer2; break;
+        case GLFW_KEY_R: animarMujerSola = !animarMujerSola; break;
+        case GLFW_KEY_F: animarHombreDerecho = !animarHombreDerecho; break;
+        case GLFW_KEY_Z: animarHombreSaludo = !animarHombreSaludo; break;
+        case GLFW_KEY_X: animarMujerSaludo = !animarMujerSaludo; break;
+        case GLFW_KEY_B: animarBotes = !animarBotes; break;
+        }
     }
 }
 
