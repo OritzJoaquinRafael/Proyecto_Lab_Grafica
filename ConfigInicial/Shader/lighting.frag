@@ -54,6 +54,7 @@ uniform PointLight pointLights[NUMBER_OF_POINT_LIGHTS];
 uniform SpotLight spotLight;
 uniform Material material;
 uniform int transparency;
+uniform float tiempoAgua;
 uniform float brilloLampara;
 
 // Agua

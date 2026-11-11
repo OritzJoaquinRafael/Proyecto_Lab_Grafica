@@ -1,7 +1,7 @@
 ﻿// Proyecto
-// Ortiz Valles Joaquin Rafael y Juárez Osorio Josue Alexis
+// Ortiz Valles Joaquin Rafael y Ju�rez Osorio Josue Alexis
 // Fecha de entrega: 11/11/2026
-// Código unificado: Animación de recorrido + Skybox + Gestos (LUZ LUNA NOTABLE Y DINÁMICA) + Optimizaciones + Botes/Agua
+// C�digo unificado: Animaci�n de recorrido + Skybox + Gestos (LUZ LUNA NOTABLE Y DIN�MICA) + Optimizaciones + Botes/Agua
 
 #include <iostream>
 #include <cmath>
@@ -51,11 +51,11 @@ bool firstMouse = true;
 glm::vec3 lightPos(0.0f, 0.0f, 0.0f);
 bool active;
 
-// --- CONFIGURACIÓN DE LA LUNA (Tuya: Notable y Dinámica) ---
+// --- CONFIGURACI�N DE LA LUNA (Tuya: Notable y Din�mica) ---
 float radioLuna = 350.0f;       // Distancia desde el centro
 float alturaLuna = 100.0f;       // Altura en el cielo
-float movelightPos = 61.0f;      // Ángulo de posición inicial
-bool animarLuna = false;        // Empieza estática hasta presionar 'P'
+float movelightPos = 61.0f;      // �ngulo de posici�n inicial
+bool animarLuna = false;        // Empieza est�tica hasta presionar 'P'
 
 // --- SKYBOX TINT ---
 const glm::vec3 SKY_TINT(1.0f, 1.0f, 1.0f);
@@ -72,10 +72,10 @@ float anguloMuj = 0.0f;
 float anguloInicialMuj = 0.0f;
 float anguloFinalMuj = 0.0f;
 
-// Recorrido independiente de la MUJER QUE ESTÁ SOLA (Muj)
+// Recorrido independiente de la MUJER QUE EST� SOLA (Muj)
 float mujSoloPos_Z = 0.0f;
 const float DISTANCIA_MUJ_SOLO = 68.0f;
-int estadoMujSolo = 0; // 0: camina, 1: gira al agua, 2: señala, 3: gira, 4: regresa, 5: gira al inicio
+int estadoMujSolo = 0; // 0: camina, 1: gira al agua, 2: se�ala, 3: gira, 4: regresa, 5: gira al inicio
 float tiempoGiroMujSolo = 0.0f;
 float tiempoDetenidaMujSolo = 0.0f;
 float anguloMujSolo = 0.0f;
@@ -107,13 +107,13 @@ float anguloInicialHomPuente = 90.0f;
 float anguloFinalHomPuente = 270.0f;
 const float DURACION_GIRO_HOM_PUENTE = 0.8f;
 
-// Positions of the 5 static point lights (4 de tus edificios + 1 farol de tu compañero)
+// Positions of the 5 static point lights (4 de tus edificios + 1 farol de tu compa�ero)
 glm::vec3 pointLightPositions[] = {
     glm::vec3(-80.0f, 0.95f, 3.0f),    // Luz 0: Edificio Izquierdo 1 (Tuya)
     glm::vec3(-84.0f, 0.95f, -110.0f), // Luz 1: Edificio Izquierdo 4 (Tuya)
     glm::vec3(77.0f, 0.95f, 2.2f),     // Luz 2: Edificio Derecho 1 (Tuya)
     glm::vec3(90.0f, 0.95f, -121.0f),  // Luz 3: Edificio Derecho 3 (Tuya)
-    glm::vec3(0.0f, 4.0f, 0.0f)        // Luz 4: Farol blanco (Compañero)
+    glm::vec3(0.0f, 4.0f, 0.0f)        // Luz 4: Farol blanco (Compa�ero)
 };
 
 float vertices[] = {
@@ -238,7 +238,7 @@ GLuint loadCubemap(std::vector<std::string> faces)
 }
 
 // =======================================================================
-// FUNCIONES DE CINEMÁTICA Y GESTOS
+// FUNCIONES DE CINEM�TICA Y GESTOS
 // =======================================================================
 static glm::mat4 MatrizAssimp(const aiMatrix4x4& matriz)
 {
@@ -489,7 +489,7 @@ int main()
     // Init GLFW
     glfwInit();
 
-    // TU CONFIGURACIÓN DE VENTANA
+    // TU CONFIGURACI�N DE VENTANA
     GLFWwindow* window = glfwCreateWindow(WIDTH, HEIGHT, "Proyecto", nullptr, nullptr);
 
     if (nullptr == window)
@@ -500,7 +500,7 @@ int main()
     }
 
     glfwMakeContextCurrent(window);
-    glfwSwapInterval(1); // OPTIMIZACIÓN TUYA: VSync activado para evitar sobrecalentamiento y picos de GPU en laptop
+    glfwSwapInterval(1); // OPTIMIZACI�N TUYA: VSync activado para evitar sobrecalentamiento y picos de GPU en laptop
 
     glfwGetFramebufferSize(window, &SCREEN_WIDTH, &SCREEN_HEIGHT);
 
@@ -532,7 +532,7 @@ int main()
     Model Muj((char*)"Models/mujer.fbx", "mujer.png");
     Model Muj1((char*)"Models/mujer1.fbx", "mujer1.png");
     Model Muj2((char*)"Models/mujer2.fbx", "mujer2.png");
-    Model Agu((char*)"Models/agua.obj"); // Usaremos tu objeto y la animación shader de tu compañero
+    Model Agu((char*)"Models/agua.obj"); // Usaremos tu objeto y la animaci�n shader de tu compa�ero
     Model Gor((char*)"Models/gorin.obj");
     Model HomS((char*)"Models/homsal.fbx", "hombre.png");
     Model HomB((char*)"Models/hombor.fbx", "hombre1.png");
@@ -580,7 +580,7 @@ int main()
     GLuint cubemapTexture = loadCubemap(faces);
 
     // =======================================================================
-    // OPTIMIZACIÓN TUYA: CACHÉ DE UBICACIONES DE UNIFORMS EN SHADERS
+    // OPTIMIZACI�N TUYA: CACH� DE UBICACIONES DE UNIFORMS EN SHADERS
     // =======================================================================
     lightingShader.Use();
     glUniform1i(glGetUniformLocation(lightingShader.Program, "Material.difuse"), 0);
@@ -595,7 +595,7 @@ int main()
     GLint locBrilloLampara = glGetUniformLocation(lightingShader.Program, "brilloLampara");
     GLint locBones = glGetUniformLocation(lightingShader.Program, "finalBoneMatrices[0]");
 
-    // Shader de agua (Compañero)
+    // Shader de agua (Compa�ero)
     GLint locIsWater = glGetUniformLocation(lightingShader.Program, "isWater");
     GLint locTiempoAgua = glGetUniformLocation(lightingShader.Program, "tiempoAgua");
 
@@ -604,7 +604,7 @@ int main()
     GLint locDirLightDiff = glGetUniformLocation(lightingShader.Program, "dirLight.diffuse");
     GLint locDirLightSpec = glGetUniformLocation(lightingShader.Program, "dirLight.specular");
 
-    // FUSIÓN: Ahora soportaremos 7 luces (4 tuyas + 1 farol + 2 botes)
+    // FUSI�N: Ahora soportaremos 7 luces (4 tuyas + 1 farol + 2 botes)
     struct PointLightLocs {
         GLint pos, amb, diff, spec, constant, linear, quad;
     } locPointLights[7];
@@ -620,7 +620,7 @@ int main()
         locPointLights[i].quad = glGetUniformLocation(lightingShader.Program, (prefix + "quadratic").c_str());
     }
 
-    // SpotLight (Compañero)
+    // SpotLight (Compa�ero)
     GLint locSpotLightPos = glGetUniformLocation(lightingShader.Program, "spotLight.position");
     GLint locSpotLightDir = glGetUniformLocation(lightingShader.Program, "spotLight.direction");
 
@@ -662,7 +662,7 @@ int main()
             0.12f, 10.0f
         );
 
-        // Posiciones de las luces cálidas de los botes (Compañero)
+        // Posiciones de las luces c�lidas de los botes (Compa�ero)
         glm::vec3 posicionLuzBoteIzquierdo = glm::vec3(modeloBoteIzquierdo * glm::vec4(0.0f, 0.78f, 0.0f, 1.0f));
         glm::vec3 posicionLuzBoteDerecho = glm::vec3(modeloBoteDerecho * glm::vec4(0.0f, 0.78f, 0.0f, 1.0f));
 
@@ -670,7 +670,7 @@ int main()
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         // =======================================================================
-        // 1. CONFIGURAR LUCES Y SHADER PRINCIPAL DE ILUMINACIÓN
+        // 1. CONFIGURAR LUCES Y SHADER PRINCIPAL DE ILUMINACI�N
         // =======================================================================
         glEnable(GL_DEPTH_TEST);
         lightingShader.Use();
@@ -678,15 +678,15 @@ int main()
         glUniform1i(locIsWater, 0); // Por defecto no es agua
         glUniform3f(locViewPos, camera.GetPosition().x, camera.GetPosition().y, camera.GetPosition().z);
 
-        // --- MATEMÁTICA Y POSICIÓN DE LA LUNA (Tuya) ---
+        // --- MATEM�TICA Y POSICI�N DE LA LUNA (Tuya) ---
         if (animarLuna) {
-            movelightPos += 0.15f * deltaTime; // Animación con 'P'
+            movelightPos += 0.15f * deltaTime; // Animaci�n con 'P'
         }
         float lunaX = radioLuna * cos(movelightPos);
         float lunaZ = radioLuna * sin(movelightPos);
         glm::vec3 posicionLuna(lunaX, alturaLuna, lunaZ);
 
-        // --- LUZ DIRECCIONAL DE LUNA (MÁS NOTABLE - TUYA) ---
+        // --- LUZ DIRECCIONAL DE LUNA (M�S NOTABLE - TUYA) ---
         glm::vec3 dirLuna = glm::normalize(-posicionLuna);
         glUniform3f(locDirLightDir, dirLuna.x, dirLuna.y, dirLuna.z);
         glUniform3f(locDirLightAmb, 0.12f, 0.15f, 0.22f);
@@ -730,7 +730,7 @@ int main()
         glUniform1f(locPointLights[3].linear, 0.007f);
         glUniform1f(locPointLights[3].quad, 0.0002f);
 
-        // Luz 4: Farol Blanco (Compañero)
+        // Luz 4: Farol Blanco (Compa�ero)
         glUniform3f(locPointLights[4].pos, pointLightPositions[4].x, pointLightPositions[4].y, pointLightPositions[4].z);
         glUniform3f(locPointLights[4].amb, 0.1f, 0.1f, 0.1f);
         glUniform3f(locPointLights[4].diff, 0.9f, 0.9f, 0.8f);
@@ -739,7 +739,7 @@ int main()
         glUniform1f(locPointLights[4].linear, 0.09f);
         glUniform1f(locPointLights[4].quad, 0.032f);
 
-        // Luz 5: Bote de almas Izquierdo (Compañero)
+        // Luz 5: Bote de almas Izquierdo (Compa�ero)
         glUniform3f(locPointLights[5].pos, posicionLuzBoteIzquierdo.x, posicionLuzBoteIzquierdo.y, posicionLuzBoteIzquierdo.z);
         glUniform3f(locPointLights[5].amb, 0.045f, 0.022f, 0.008f);
         glUniform3f(locPointLights[5].diff, 1.0f, 0.58f, 0.24f);
@@ -748,7 +748,7 @@ int main()
         glUniform1f(locPointLights[5].linear, 0.08f);
         glUniform1f(locPointLights[5].quad, 0.02f);
 
-        // Luz 6: Bote de almas Derecho (Compañero)
+        // Luz 6: Bote de almas Derecho (Compa�ero)
         glUniform3f(locPointLights[6].pos, posicionLuzBoteDerecho.x, posicionLuzBoteDerecho.y, posicionLuzBoteDerecho.z);
         glUniform3f(locPointLights[6].amb, 0.045f, 0.022f, 0.008f);
         glUniform3f(locPointLights[6].diff, 1.0f, 0.58f, 0.24f);
@@ -757,7 +757,7 @@ int main()
         glUniform1f(locPointLights[6].linear, 0.08f);
         glUniform1f(locPointLights[6].quad, 0.02f);
 
-        // Spotlight del compañero
+        // Spotlight del compa�ero
         glUniform3f(locSpotLightPos, camera.GetPosition().x, camera.GetPosition().y, camera.GetPosition().z);
         glUniform3f(locSpotLightDir, camera.GetFront().x, camera.GetFront().y, camera.GetFront().z);
 
@@ -770,17 +770,17 @@ int main()
         glm::mat4 model = glm::mat4(1.0f);
 
         // =======================================================================
-        // 2. DIBUJO DE MODELOS ESTÁTICOS
+        // 2. DIBUJO DE MODELOS EST�TICOS
         // =======================================================================
 
-        // 1. Árbol Izquierdo
+        // 1. �rbol Izquierdo
         model = glm::translate(glm::mat4(1.0f), glm::vec3(-45.0f, -3.5f, -60.0f));
         model = glm::scale(model, glm::vec3(10.0f));
         glUniformMatrix4fv(locModel, 1, GL_FALSE, glm::value_ptr(model));
         glUniform1i(locTransparency, 0);
         arb.Draw(lightingShader);
 
-        // 1.1 Árbol Derecho
+        // 1.1 �rbol Derecho
         model = glm::translate(glm::mat4(1.0f), glm::vec3(45.0f, -3.5f, -60.0f));
         model = glm::scale(model, glm::vec3(10.0f));
         glUniformMatrix4fv(locModel, 1, GL_FALSE, glm::value_ptr(model));
@@ -943,7 +943,7 @@ int main()
         Luna.Draw(lightingShader);
 
         // ======================================================================================
-        // LÓGICA DE RECORRIDOS Y RECORRIDO GRUPAL
+        // L�GICA DE RECORRIDOS Y RECORRIDO GRUPAL
         // ======================================================================================
         if (!mujGirando)
         {
@@ -1177,10 +1177,10 @@ int main()
         }
 
         // ======================================================================================
-        // 3. DIBUJO DE MODELOS ANIMADOS (OPTIMIZACIÓN TUYA: ENVÍO MASIVO DE MATRICES)
+        // 3. DIBUJO DE MODELOS ANIMADOS (OPTIMIZACI�N TUYA: ENV�O MASIVO DE MATRICES)
         // ======================================================================================
 
-        // 9. Mujer Sola (con gesto cinemático)
+        // 9. Mujer Sola (con gesto cinem�tico)
         if (estadoMujSolo == 0 || estadoMujSolo == 4)
             Muj.UpdateAnimation(deltaTime, Muj.GetScenePointer());
         else
@@ -1271,7 +1271,7 @@ int main()
         glBindVertexArray(0);
 
         // =======================================================================
-        // 4. DIBUJAR LÁMPARAS Y BOTES 
+        // 4. DIBUJAR L�MPARAS Y BOTES 
         // =======================================================================
         lampShader.Use();
         glUniformMatrix4fv(locLampView, 1, GL_FALSE, glm::value_ptr(view));
@@ -1287,7 +1287,7 @@ int main()
             glDrawArrays(GL_TRIANGLES, 0, 36);
         }
 
-        // Fuentes visibles de luz cálida sobre los botes (Compañero)
+        // Fuentes visibles de luz c�lida sobre los botes (Compa�ero)
         float intensidadLlama = 0.96f + 0.04f * sin(currentFrame * 7.0f);
         glUniform3f(locLampColor, intensidadLlama, 0.84f * intensidadLlama, 0.22f * intensidadLlama);
 
@@ -1304,7 +1304,7 @@ int main()
         glBindVertexArray(0);
 
         // =======================================================================
-        // 5. OPTIMIZACIÓN TUYA: SKYBOX DIBUJADO AL FINAL (SIN OVERDRAW EN GPU)
+        // 5. OPTIMIZACI�N TUYA: SKYBOX DIBUJADO AL FINAL (SIN OVERDRAW EN GPU)
         // =======================================================================
         glDepthFunc(GL_LEQUAL);
         skyboxShader.Use();
@@ -1322,11 +1322,11 @@ int main()
         glDepthFunc(GL_LESS);
 
         // =======================================================================
-        // 6. FUSIÓN: AGUA DEL COMPAÑERO Y LA TUYA COMBINADAS 
+        // 6. FUSI�N: AGUA DEL COMPA�ERO Y LA TUYA COMBINADAS 
         // =======================================================================
         lightingShader.Use();
 
-        // Efecto del compañero (Shader animado)
+        // Efecto del compa�ero (Shader animado)
         lightingShader.Use();
 
         model = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, -9.748f, -60.0f));
