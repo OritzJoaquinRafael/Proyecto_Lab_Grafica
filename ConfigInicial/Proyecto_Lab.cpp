@@ -7,6 +7,7 @@
 #include <cmath>
 #include <vector>
 #include <string>
+#include <fstream> // Necesario para guardar y cargar KeyFrames
 
 // GLEW
 #include <GL/glew.h>
@@ -35,6 +36,12 @@
 void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mode);
 void MouseCallback(GLFWwindow* window, double xPos, double yPos);
 void DoMovement();
+void Animation();
+void saveFrame();
+void resetElements();
+void interpolation();
+void saveAnimationToFile();
+void loadAnimationFromFile();
 
 // Window dimensions
 const GLuint WIDTH = 1280, HEIGHT = 720;
@@ -57,9 +64,187 @@ bool animarMujerSaludo = false;
 bool animarBotes = false;
 float tiempoAnimacionBotes = 0.0f;
 
+// =======================================================================
+// ANIMACIÓN JERÁRQUICA Y SISTEMA DE KEYFRAMES (Linterna 9)
+// =======================================================================
+// Posición y rotación general del personaje entero
+glm::vec3 posPersonaje(-33.2f, -8.0f, 10.0f);
+float rotPersonajeY = 0.0f;
+
+// Ángulos de articulación 
+float anguloTorsoX = 0.0f;
+float anguloCabezaX = 0.0f;
+float anguloBrazoIzqX = 0.0f;
+float anguloBrazoDerX = 0.0f;
+float anguloPiernaIzqX = 0.0f;
+float anguloPiernaDerX = 0.0f;
+
+// Crecimiento y estado de la Linterna 9
+float escalaLinterna9 = 0.0f;
+bool linternaEnAgua = false;
+glm::vec3 posLinternaAgua(0.0f);
+float progresoLinternaAgua = 0.0f;
+
+// Estructura de Keyframes
+#define MAX_FRAMES 100
+int i_max_steps = 90; // Velocidad de transición entre frames
+int i_curr_steps = 0;
+
+typedef struct _frame {
+    float posX, posY, posZ;
+    float rotY;
+    float torsoX, cabezaX;
+    float brazoIzqX, brazoDerX;
+    float piernaIzqX, piernaDerX;
+    float escalaLinterna;
+    bool soltarAgua;
+
+    // Incrementos interpolados
+    float incX, incY, incZ;
+    float incRotY;
+    float incTorso, incCabeza;
+    float incBrazoIzq, incBrazoDer;
+    float incPiernaIzq, incPiernaDer;
+    float incEscalaLinterna;
+} FRAME;
+
+FRAME KeyFrame[MAX_FRAMES];
+int FrameIndex = 0;
+bool play = false;
+int playIndex = 0;
+
+void saveFrame(void) {
+    if (FrameIndex < MAX_FRAMES) {
+        std::cout << "Guardando Frame: " << FrameIndex << std::endl;
+        KeyFrame[FrameIndex].posX = posPersonaje.x;
+        KeyFrame[FrameIndex].posY = posPersonaje.y;
+        KeyFrame[FrameIndex].posZ = posPersonaje.z;
+        KeyFrame[FrameIndex].rotY = rotPersonajeY;
+        KeyFrame[FrameIndex].torsoX = anguloTorsoX;
+        KeyFrame[FrameIndex].cabezaX = anguloCabezaX;
+        KeyFrame[FrameIndex].brazoIzqX = anguloBrazoIzqX;
+        KeyFrame[FrameIndex].brazoDerX = anguloBrazoDerX;
+        KeyFrame[FrameIndex].piernaIzqX = anguloPiernaIzqX;
+        KeyFrame[FrameIndex].piernaDerX = anguloPiernaDerX;
+        KeyFrame[FrameIndex].escalaLinterna = escalaLinterna9;
+        KeyFrame[FrameIndex].soltarAgua = linternaEnAgua;
+        FrameIndex++;
+    }
+}
+
+void resetElements(void) {
+    if (FrameIndex > 0) {
+        posPersonaje.x = KeyFrame[0].posX;
+        posPersonaje.y = KeyFrame[0].posY;
+        posPersonaje.z = KeyFrame[0].posZ;
+        rotPersonajeY = KeyFrame[0].rotY;
+        anguloTorsoX = KeyFrame[0].torsoX;
+        anguloCabezaX = KeyFrame[0].cabezaX;
+        anguloBrazoIzqX = KeyFrame[0].brazoIzqX;
+        anguloBrazoDerX = KeyFrame[0].brazoDerX;
+        anguloPiernaIzqX = KeyFrame[0].piernaIzqX;
+        anguloPiernaDerX = KeyFrame[0].piernaDerX;
+        escalaLinterna9 = KeyFrame[0].escalaLinterna;
+        linternaEnAgua = KeyFrame[0].soltarAgua;
+        progresoLinternaAgua = 0.0f;
+    }
+}
+
+void interpolation(void) {
+    KeyFrame[playIndex].incX = (KeyFrame[playIndex + 1].posX - KeyFrame[playIndex].posX) / i_max_steps;
+    KeyFrame[playIndex].incY = (KeyFrame[playIndex + 1].posY - KeyFrame[playIndex].posY) / i_max_steps;
+    KeyFrame[playIndex].incZ = (KeyFrame[playIndex + 1].posZ - KeyFrame[playIndex].posZ) / i_max_steps;
+    KeyFrame[playIndex].incRotY = (KeyFrame[playIndex + 1].rotY - KeyFrame[playIndex].rotY) / i_max_steps;
+    KeyFrame[playIndex].incTorso = (KeyFrame[playIndex + 1].torsoX - KeyFrame[playIndex].torsoX) / i_max_steps;
+    KeyFrame[playIndex].incCabeza = (KeyFrame[playIndex + 1].cabezaX - KeyFrame[playIndex].cabezaX) / i_max_steps;
+    KeyFrame[playIndex].incBrazoIzq = (KeyFrame[playIndex + 1].brazoIzqX - KeyFrame[playIndex].brazoIzqX) / i_max_steps;
+    KeyFrame[playIndex].incBrazoDer = (KeyFrame[playIndex + 1].brazoDerX - KeyFrame[playIndex].brazoDerX) / i_max_steps;
+    KeyFrame[playIndex].incPiernaIzq = (KeyFrame[playIndex + 1].piernaIzqX - KeyFrame[playIndex].piernaIzqX) / i_max_steps;
+    KeyFrame[playIndex].incPiernaDer = (KeyFrame[playIndex + 1].piernaDerX - KeyFrame[playIndex].piernaDerX) / i_max_steps;
+    KeyFrame[playIndex].incEscalaLinterna = (KeyFrame[playIndex + 1].escalaLinterna - KeyFrame[playIndex].escalaLinterna) / i_max_steps;
+}
+
+void Animation() {
+    if (play) {
+        if (i_curr_steps >= i_max_steps) {
+            playIndex++;
+            if (playIndex >= FrameIndex - 1) {
+                std::cout << "Termina animacion" << std::endl;
+                playIndex = 0;
+                play = false;
+            }
+            else {
+                i_curr_steps = 0;
+                interpolation();
+
+                // Si en el siguiente frame la linterna se suelta al agua
+                if (KeyFrame[playIndex + 1].soltarAgua && !linternaEnAgua) {
+                    linternaEnAgua = true;
+                    posLinternaAgua = glm::vec3(posPersonaje.x, -9.8f, posPersonaje.z);
+                    progresoLinternaAgua = 0.0f;
+                }
+            }
+        }
+        else {
+            posPersonaje.x += KeyFrame[playIndex].incX;
+            posPersonaje.y += KeyFrame[playIndex].incY;
+            posPersonaje.z += KeyFrame[playIndex].incZ;
+            rotPersonajeY += KeyFrame[playIndex].incRotY;
+            anguloTorsoX += KeyFrame[playIndex].incTorso;
+            anguloCabezaX += KeyFrame[playIndex].incCabeza;
+            anguloBrazoIzqX += KeyFrame[playIndex].incBrazoIzq;
+            anguloBrazoDerX += KeyFrame[playIndex].incBrazoDer;
+            anguloPiernaIzqX += KeyFrame[playIndex].incPiernaIzq;
+            anguloPiernaDerX += KeyFrame[playIndex].incPiernaDer;
+            escalaLinterna9 += KeyFrame[playIndex].incEscalaLinterna;
+
+            i_curr_steps++;
+        }
+    }
+}
+
+void saveAnimationToFile() {
+    std::ofstream file("animacion_linterna.txt");
+    if (file.is_open()) {
+        file << FrameIndex << "\n";
+        for (int i = 0; i < FrameIndex; i++) {
+            file << KeyFrame[i].posX << " " << KeyFrame[i].posY << " " << KeyFrame[i].posZ << " "
+                << KeyFrame[i].rotY << " " << KeyFrame[i].torsoX << " " << KeyFrame[i].cabezaX << " "
+                << KeyFrame[i].brazoIzqX << " " << KeyFrame[i].brazoDerX << " "
+                << KeyFrame[i].piernaIzqX << " " << KeyFrame[i].piernaDerX << " "
+                << KeyFrame[i].escalaLinterna << " " << KeyFrame[i].soltarAgua << "\n";
+        }
+        file.close();
+        std::cout << "EXITO: Animacion exportada a 'animacion_linterna.txt'" << std::endl;
+    }
+    else {
+        std::cout << "ERROR: No se pudo crear el archivo." << std::endl;
+    }
+}
+
+void loadAnimationFromFile() {
+    std::ifstream file("animacion_linterna.txt");
+    if (file.is_open()) {
+        file >> FrameIndex;
+        for (int i = 0; i < FrameIndex; i++) {
+            file >> KeyFrame[i].posX >> KeyFrame[i].posY >> KeyFrame[i].posZ
+                >> KeyFrame[i].rotY >> KeyFrame[i].torsoX >> KeyFrame[i].cabezaX
+                >> KeyFrame[i].brazoIzqX >> KeyFrame[i].brazoDerX
+                >> KeyFrame[i].piernaIzqX >> KeyFrame[i].piernaDerX
+                >> KeyFrame[i].escalaLinterna >> KeyFrame[i].soltarAgua;
+        }
+        file.close();
+        std::cout << "EXITO: Animacion cargada. Frames cargados: " << FrameIndex << std::endl;
+        resetElements();
+    }
+    else {
+        std::cout << "ERROR: No se encontro el archivo 'animacion_linterna.txt'" << std::endl;
+    }
+}
+
 // --- CONTROLES DE LINTERNAS (Tōrō) ---
-bool animarLinternasAvance = false;   
-bool animarLinternasBalanceo = false; 
+bool animarLinternasAvance = false;
+bool animarLinternasBalanceo = false;
 
 const float VELOCIDAD_LINTERNAS = 2.5f;
 const float Z_INICIO_LINTERNAS = 13.0f;
@@ -584,7 +769,6 @@ int main()
     Model Muj((char*)"Models/mujer.fbx", "mujer.png");
     Model Muj1((char*)"Models/mujer1.fbx", "mujer1.png");
     Model Muj2((char*)"Models/mujer2.fbx", "mujer2.png");
-    Model Agu((char*)"Models/agua.obj");
     Model Gor((char*)"Models/gorin.obj");
     Model HomS((char*)"Models/homsal.fbx", "hombre.png");
     Model HomB((char*)"Models/hombor.fbx", "hombre1.png");
@@ -599,6 +783,12 @@ int main()
     Model Far((char*)"Models/farol.obj");
     Model Com((char*)"Models/comida.obj");
     Model Lin((char*)"Models/linterna.obj");
+    Model Torso((char*)"Models/hom/torso.obj");
+    Model Cabeza((char*)"Models/hom/cabeza.obj");
+    Model BrazoIzq((char*)"Models/hom/brazoizq.obj");
+    Model BrazoDer((char*)"Models/hom/brazoder.obj");
+    Model PiernaIzq((char*)"Models/hom/piernaizq.obj");
+    Model PiernaDer((char*)"Models/hom/piernader.obj");
 
     // Model VAO/VBO
     GLuint VBO, VAO;
@@ -683,9 +873,7 @@ int main()
 
     glm::mat4 projection = glm::perspective(camera.GetZoom(), (GLfloat)SCREEN_WIDTH / (GLfloat)SCREEN_HEIGHT, 1.0f, 1000.0f);
 
-    // Distancia máxima para actualizar animaciones y no sobrecargar la CPU
     const float MAX_DIST = 150.0f;
-
     InicializarLinternas();
 
     // Game loop
@@ -694,8 +882,10 @@ int main()
         GLfloat currentFrame = glfwGetTime();
         deltaTime = currentFrame - lastFrame;
         lastFrame = currentFrame;
+
         glfwPollEvents();
         DoMovement();
+        Animation();
 
         //  DETECCIÓN DE PROXIMIDAD Y TEXTOS INFORMATIVOS mediante (Gorin-to)
         glm::vec3 posGor1(-45.0f, -3.6f, -32.0f);
@@ -719,7 +909,12 @@ int main()
             glfwSetWindowTitle(window, "Gorin-to: monumento de los 5 elementos del budismo.");
         }
         else {
-            glfwSetWindowTitle(window, "Proyecto"); // Vuelve a la normalidad si te alejas
+            glfwSetWindowTitle(window, "Proyecto");
+        }
+
+        // MAQUINA DE ESTADOS: Linterna flotando en el río
+        if (linternaEnAgua) {
+            progresoLinternaAgua -= VELOCIDAD_LINTERNAS * deltaTime;
         }
 
         if (animarBotes)
@@ -742,9 +937,6 @@ int main()
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        // =======================================================================
-        // 1. CONFIGURAR LUCES Y SHADER PRINCIPAL DE ILUMINACIÓN
-        // =======================================================================
         glEnable(GL_DEPTH_TEST);
         lightingShader.Use();
         glUniform1f(locBrilloLampara, 0.0f);
@@ -780,9 +972,7 @@ int main()
         glUniformMatrix4fv(locProj, 1, GL_FALSE, glm::value_ptr(projection));
         glm::mat4 model = glm::mat4(1.0f);
 
-        // =======================================================================
-        // 2. DIBUJO DE MODELOS ESTÁTICOS
-        // =======================================================================
+        // MODELOS ESTÁTICOS
         model = glm::translate(glm::mat4(1.0f), glm::vec3(-45.0f, -3.5f, -60.0f));
         model = glm::scale(model, glm::vec3(10.0f));
         glUniformMatrix4fv(locModel, 1, GL_FALSE, glm::value_ptr(model));
@@ -824,113 +1014,165 @@ int main()
         glUniformMatrix4fv(locModel, 1, GL_FALSE, glm::value_ptr(model));
         Tor.Draw(lightingShader);
 
-        // Puesto de preparación 1 izquierdo
         model = glm::translate(glm::mat4(1.0f), glm::vec3(-33.2f, -8.0f, 12.0f));
         model = glm::scale(model, glm::vec3(4.0f, 4.0f, 4.0f));
         model = glm::rotate(model, glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
         glUniformMatrix4fv(locModel, 1, GL_FALSE, glm::value_ptr(model));
         Puesto.Draw(lightingShader);
 
-        // Puesto de preparación 2 derecho
         model = glm::translate(glm::mat4(1.0f), glm::vec3(33.2f, -8.0f, -130.0f));
         model = glm::scale(model, glm::vec3(4.0f, 4.0f, 4.0f));
         glUniformMatrix4fv(locModel, 1, GL_FALSE, glm::value_ptr(model));
         Puesto.Draw(lightingShader);
 
-        // brillo para que los faroles destaquen de noche
         glUniform1f(locBrilloLampara, 0.35f);
 
-        // Farol izquierdo 1
         model = glm::translate(glm::mat4(1.0f), glm::vec3(46.0f, -4.0f, 12.0f));
         model = glm::scale(model, glm::vec3(8.0f, 8.0f, 8.0f));
         model = glm::rotate(model, glm::radians(270.0f), glm::vec3(0.0f, 1.0f, 0.0f));
         glUniformMatrix4fv(locModel, 1, GL_FALSE, glm::value_ptr(model));
         Far.Draw(lightingShader);
 
-        // Farol izquierdo 2
         model = glm::translate(glm::mat4(1.0f), glm::vec3(46.0f, -4.0f, -130.0f));
         model = glm::scale(model, glm::vec3(8.0f, 8.0f, 8.0f));
         glUniformMatrix4fv(locModel, 1, GL_FALSE, glm::value_ptr(model));
         Far.Draw(lightingShader);
 
-        // Farol derecho 1
         model = glm::translate(glm::mat4(1.0f), glm::vec3(-46.0f, -4.0f, 12.0f));
         model = glm::scale(model, glm::vec3(8.0f, 8.0f, 8.0f));
         model = glm::rotate(model, glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
         glUniformMatrix4fv(locModel, 1, GL_FALSE, glm::value_ptr(model));
         Far.Draw(lightingShader);
 
-        // Farol derecho 2
         model = glm::translate(glm::mat4(1.0f), glm::vec3(-46.0f, -4.0f, -130.0f));
         model = glm::scale(model, glm::vec3(8.0f, 8.0f, 8.0f));
         model = glm::rotate(model, glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
         glUniformMatrix4fv(locModel, 1, GL_FALSE, glm::value_ptr(model));
         Far.Draw(lightingShader);
 
-        // Apagar el brillo para los puestos de comida
         glUniform1f(locBrilloLampara, 0.0f);
 
-        // Comida 1 izquierda
         model = glm::translate(glm::mat4(1.0f), glm::vec3(-33.2f, -8.0f, -130.0f));
         model = glm::scale(model, glm::vec3(4.0f, 4.0f, 4.0f));
         glUniformMatrix4fv(locModel, 1, GL_FALSE, glm::value_ptr(model));
         Com.Draw(lightingShader);
 
-        // Comida 2 derecha
         model = glm::translate(glm::mat4(1.0f), glm::vec3(33.2f, -8.0f, 12.0f));
         model = glm::scale(model, glm::vec3(4.0f, 4.0f, 4.0f));
         model = glm::rotate(model, glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
         glUniformMatrix4fv(locModel, 1, GL_FALSE, glm::value_ptr(model));
         Com.Draw(lightingShader);
 
-        // Encender el brillo con titileo para los botes
+        // =======================================================================
+        // PERSONAJE ARTICULADO (Controlado por Keyframes o por Ti)
+        // =======================================================================
+        // 1. EL TORSO
+        glm::mat4 modelTorso = glm::translate(glm::mat4(1.0f), posPersonaje);
+        modelTorso = glm::rotate(modelTorso, glm::radians(rotPersonajeY), glm::vec3(0.0f, 1.0f, 0.0f));
+        modelTorso = glm::rotate(modelTorso, glm::radians(anguloTorsoX), glm::vec3(1.0f, 0.0f, 0.0f));
+        modelTorso = glm::scale(modelTorso, glm::vec3(2.2f, 2.2f, 2.2f));
+        glUniformMatrix4fv(locModel, 1, GL_FALSE, glm::value_ptr(modelTorso));
+        Torso.Draw(lightingShader);
+
+        // 2. LA CABEZA 
+        glm::mat4 modelCabeza = glm::translate(modelTorso, glm::vec3(0.0f, 0.52f, 0.0f));
+        modelCabeza = glm::rotate(modelCabeza, glm::radians(anguloCabezaX), glm::vec3(1.0f, 0.0f, 0.0f));
+        glUniformMatrix4fv(locModel, 1, GL_FALSE, glm::value_ptr(modelCabeza));
+        Cabeza.Draw(lightingShader);
+
+        // 3. BRAZO IZQUIERDO 
+        glm::mat4 modelBrazoI = glm::translate(modelTorso, glm::vec3(0.24f, 0.44f, 0.0f));
+        modelBrazoI = glm::rotate(modelBrazoI, glm::radians(anguloBrazoIzqX), glm::vec3(1.0f, 0.0f, 0.0f));
+        glUniformMatrix4fv(locModel, 1, GL_FALSE, glm::value_ptr(modelBrazoI));
+        BrazoIzq.Draw(lightingShader);
+
+        // 4. BRAZO DERECHO
+        glm::mat4 modelBrazoD = glm::translate(modelTorso, glm::vec3(-0.24f, 0.44f, 0.0f));
+        modelBrazoD = glm::rotate(modelBrazoD, glm::radians(anguloBrazoDerX), glm::vec3(1.0f, 0.0f, 0.0f));
+        glUniformMatrix4fv(locModel, 1, GL_FALSE, glm::value_ptr(modelBrazoD));
+        BrazoDer.Draw(lightingShader);
+
+        // 5. PIERNA IZQUIERDA
+        glm::mat4 modelPiernaI = glm::translate(modelTorso, glm::vec3(0.09f, 0.0f, 0.0f));
+        modelPiernaI = glm::rotate(modelPiernaI, glm::radians(anguloPiernaIzqX), glm::vec3(1.0f, 0.0f, 0.0f));
+        glUniformMatrix4fv(locModel, 1, GL_FALSE, glm::value_ptr(modelPiernaI));
+        PiernaIzq.Draw(lightingShader);
+
+        // 6. PIERNA DERECHA
+        glm::mat4 modelPiernaD = glm::translate(modelTorso, glm::vec3(-0.07f, 0.0f, 0.0f));
+        modelPiernaD = glm::rotate(modelPiernaD, glm::radians(anguloPiernaDerX), glm::vec3(1.0f, 0.0f, 0.0f));
+        glUniformMatrix4fv(locModel, 1, GL_FALSE, glm::value_ptr(modelPiernaD));
+        PiernaDer.Draw(lightingShader);
+
+        // =======================================================================
+        // LINTERNA 9 (Personaje)
+        // =======================================================================
+        float pulsoLinterna9 = 0.7f + 0.3f * std::sin(currentFrame * 5.0f);
+        glUniform1f(locBrilloLampara, pulsoLinterna9);
+
+        // Si está en la mano creciendo (escala > 0 y NO en el agua)
+        if (escalaLinterna9 > 0.0f && !linternaEnAgua) {
+            glm::mat4 modelLinterna9 = glm::translate(modelBrazoD, glm::vec3(0.0f, -0.6f, 0.0f));
+            modelLinterna9 = glm::scale(modelLinterna9, glm::vec3(escalaLinterna9));
+            glUniformMatrix4fv(locModel, 1, GL_FALSE, glm::value_ptr(modelLinterna9));
+            Lin.Draw(lightingShader);
+        }
+
+        // Si ya está en el agua
+        if (linternaEnAgua) {
+            float alturaBalanceoAgua = std::cos(currentFrame * 1.5f) * 0.15f;
+            float anguloBalanceoAgua = std::sin(currentFrame * 2.0f) * 15.0f;
+
+            glm::vec3 posFinalL9 = posLinternaAgua + glm::vec3(0.0f, alturaBalanceoAgua, progresoLinternaAgua);
+
+            glm::mat4 modelLinterna9Agua = glm::translate(glm::mat4(1.0f), posFinalL9);
+            modelLinterna9Agua = glm::rotate(modelLinterna9Agua, glm::radians(anguloBalanceoAgua), glm::vec3(0.0f, 0.0f, 1.0f));
+            modelLinterna9Agua = glm::scale(modelLinterna9Agua, glm::vec3(1.0f));
+
+            glUniformMatrix4fv(locModel, 1, GL_FALSE, glm::value_ptr(modelLinterna9Agua));
+            Lin.Draw(lightingShader);
+        }
+
+        // Botes de Almas
         float pulsoBote = 0.45f + 0.08f * std::sin(currentFrame * 6.0f);
         glUniform1f(locBrilloLampara, pulsoBote);
 
         glUniformMatrix4fv(locModel, 1, GL_FALSE, glm::value_ptr(modeloBoteIzquierdo));
         Sho.Draw(lightingShader);
-
         glUniformMatrix4fv(locModel, 1, GL_FALSE, glm::value_ptr(modeloBoteDerecho));
         Sho.Draw(lightingShader);
 
-        // =======================================================================
-        // LINTERNAS FLOTANTES (Tōrō)
-        // =======================================================================
+        // LINTERNAS FLOTANTES COLECTIVAS (Tōrō)
         float pulsoLinterna = 0.7f + 0.3f * std::sin(currentFrame * 5.0f);
-        glUniform1f(locBrilloLampara, pulsoLinterna); // Brillan igual que los botes
+        glUniform1f(locBrilloLampara, pulsoLinterna);
 
         for (int i = 0; i < NUM_LINTERNAS; i++) {
-            // Animación de flujo colectivo con point clipping (Animación 3)
             if (animarLinternasAvance) {
-                linternas[i].progresoZ -= VELOCIDAD_LINTERNAS * deltaTime; // Avanzan hacia -Z
+                linternas[i].progresoZ -= VELOCIDAD_LINTERNAS * deltaTime;
                 float posActualZ = linternas[i].posicionBase.z + linternas[i].progresoZ;
 
-                // Point Clipping: Si cruzan el límite, regresan al inicio
                 if (posActualZ < Z_FIN_LINTERNAS) {
                     linternas[i].progresoZ += (Z_INICIO_LINTERNAS - Z_FIN_LINTERNAS);
                 }
             }
 
-            // Vaivén flotante sobre el agua (Animación 4) - INDEPENDIENTE
             float anguloBalanceo = 0.0f;
             float alturaBalanceo = 0.0f;
             if (animarLinternasBalanceo) {
-                anguloBalanceo = std::sin(currentFrame * 2.0f + linternas[i].faseBalanceo) * 15.0f; // Inclinación
-                alturaBalanceo = std::cos(currentFrame * 1.5f + linternas[i].faseBalanceo) * 0.15f; // Sube y baja suavemente
+                anguloBalanceo = std::sin(currentFrame * 2.0f + linternas[i].faseBalanceo) * 15.0f;
+                alturaBalanceo = std::cos(currentFrame * 1.5f + linternas[i].faseBalanceo) * 0.15f;
             }
 
-            // Posición final para dibujar
             glm::vec3 posFinal = linternas[i].posicionBase + glm::vec3(0.0f, alturaBalanceo, linternas[i].progresoZ);
 
             model = glm::translate(glm::mat4(1.0f), posFinal);
-            model = glm::rotate(model, glm::radians(anguloBalanceo), glm::vec3(0.0f, 0.0f, 1.0f)); // Rota en Z para tambaleo lateral
-            model = glm::scale(model, glm::vec3(1.5f)); // Ajusta el tamaño según necesites
+            model = glm::rotate(model, glm::radians(anguloBalanceo), glm::vec3(0.0f, 0.0f, 1.0f));
+            model = glm::scale(model, glm::vec3(1.5f));
 
             glUniformMatrix4fv(locModel, 1, GL_FALSE, glm::value_ptr(model));
             Lin.Draw(lightingShader);
         }
 
-        // Apagamos el brillo para no afectar los modelos
         glUniform1f(locBrilloLampara, 0.0f);
 
         model = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, -10.0f, -60.0f));
@@ -1016,18 +1258,15 @@ int main()
         Luna.Draw(lightingShader);
 
         // ======================================================================================
-        // LÓGICA DE RECORRIDOS INDIVIDUALES POR TECLA
+        // LÓGICA DE RECORRIDOS INDIVIDUALES 
         // ======================================================================================
         if (animarMujer1) ActualizarRecorridoMujer(recorridoMujer1, deltaTime);
         if (animarMujer2) ActualizarRecorridoMujer(recorridoMujer2, deltaTime);
 
-        if (animarMujerSola)
-        {
-            if (estadoMujSolo == 0)
-            {
+        if (animarMujerSola) {
+            if (estadoMujSolo == 0) {
                 mujSoloPos_Z += VELOCIDAD_MUJ * deltaTime;
-                if (mujSoloPos_Z >= DISTANCIA_MUJ_SOLO)
-                {
+                if (mujSoloPos_Z >= DISTANCIA_MUJ_SOLO) {
                     mujSoloPos_Z = DISTANCIA_MUJ_SOLO;
                     estadoMujSolo = 1;
                     tiempoGiroMujSolo = 0.0f;
@@ -1035,49 +1274,41 @@ int main()
                     anguloFinalMujSolo = 90.0f;
                 }
             }
-            else if (estadoMujSolo == 1)
-            {
+            else if (estadoMujSolo == 1) {
                 tiempoGiroMujSolo += deltaTime;
                 float progresoGiroSolo = glm::clamp(tiempoGiroMujSolo / DURACION_GIRO_MUJ, 0.0f, 1.0f);
                 anguloMujSolo = glm::mix(anguloInicialMujSolo, anguloFinalMujSolo, progresoGiroSolo);
-                if (progresoGiroSolo >= 1.0f)
-                {
+                if (progresoGiroSolo >= 1.0f) {
                     anguloMujSolo = anguloFinalMujSolo;
                     estadoMujSolo = 2;
                     tiempoDetenidaMujSolo = 0.0f;
                 }
             }
-            else if (estadoMujSolo == 2)
-            {
+            else if (estadoMujSolo == 2) {
                 if (gestoMujSolo < 1.0f)
                     gestoMujSolo = glm::min(gestoMujSolo + deltaTime / 0.8f, 1.0f);
                 else
                     tiempoDetenidaMujSolo += deltaTime;
-                if (tiempoDetenidaMujSolo >= 10.0f)
-                {
+                if (tiempoDetenidaMujSolo >= 10.0f) {
                     estadoMujSolo = 3;
                     tiempoGiroMujSolo = 0.0f;
                     anguloInicialMujSolo = anguloMujSolo;
                     anguloFinalMujSolo = 180.0f;
                 }
             }
-            else if (estadoMujSolo == 3)
-            {
+            else if (estadoMujSolo == 3) {
                 tiempoGiroMujSolo += deltaTime;
                 gestoMujSolo = glm::max(gestoMujSolo - deltaTime / DURACION_GIRO_MUJ, 0.0f);
                 float progresoGiroSolo = glm::clamp(tiempoGiroMujSolo / DURACION_GIRO_MUJ, 0.0f, 1.0f);
                 anguloMujSolo = glm::mix(anguloInicialMujSolo, anguloFinalMujSolo, progresoGiroSolo);
-                if (progresoGiroSolo >= 1.0f)
-                {
+                if (progresoGiroSolo >= 1.0f) {
                     anguloMujSolo = anguloFinalMujSolo;
                     estadoMujSolo = 4;
                 }
             }
-            else if (estadoMujSolo == 4)
-            {
+            else if (estadoMujSolo == 4) {
                 mujSoloPos_Z -= VELOCIDAD_MUJ * deltaTime;
-                if (mujSoloPos_Z <= 0.0f)
-                {
+                if (mujSoloPos_Z <= 0.0f) {
                     mujSoloPos_Z = 0.0f;
                     estadoMujSolo = 5;
                     tiempoGiroMujSolo = 0.0f;
@@ -1085,13 +1316,11 @@ int main()
                     anguloFinalMujSolo = 0.0f;
                 }
             }
-            else if (estadoMujSolo == 5)
-            {
+            else if (estadoMujSolo == 5) {
                 tiempoGiroMujSolo += deltaTime;
                 float progresoGiroSolo = glm::clamp(tiempoGiroMujSolo / DURACION_GIRO_MUJ, 0.0f, 1.0f);
                 anguloMujSolo = glm::mix(anguloInicialMujSolo, anguloFinalMujSolo, progresoGiroSolo);
-                if (progresoGiroSolo >= 1.0f)
-                {
+                if (progresoGiroSolo >= 1.0f) {
                     anguloMujSolo = 0.0f;
                     mujSoloPos_Z = 0.0f;
                     gestoMujSolo = 0.0f;
@@ -1101,14 +1330,10 @@ int main()
             }
         }
 
-        // Hombre Derecho
-        if (animarHombreDerecho)
-        {
-            if (estadoHomDerecho == 0)
-            {
+        if (animarHombreDerecho) {
+            if (estadoHomDerecho == 0) {
                 homDerechoPosZ += VELOCIDAD_HOM_DERECHO * deltaTime;
-                if (homDerechoPosZ >= DISTANCIA_HOM_DERECHO)
-                {
+                if (homDerechoPosZ >= DISTANCIA_HOM_DERECHO) {
                     homDerechoPosZ = DISTANCIA_HOM_DERECHO;
                     estadoHomDerecho = 1;
                     tiempoGiroHomDerecho = 0.0f;
@@ -1116,22 +1341,18 @@ int main()
                     anguloFinalHomDerecho = 360.0f;
                 }
             }
-            else if (estadoHomDerecho == 1)
-            {
+            else if (estadoHomDerecho == 1) {
                 tiempoGiroHomDerecho += deltaTime;
                 float progresoGiroHomDerecho = glm::clamp(tiempoGiroHomDerecho / DURACION_GIRO_HOM_DERECHO, 0.0f, 1.0f);
                 anguloHomDerecho = glm::mix(anguloInicialHomDerecho, anguloFinalHomDerecho, progresoGiroHomDerecho);
-                if (progresoGiroHomDerecho >= 1.0f)
-                {
+                if (progresoGiroHomDerecho >= 1.0f) {
                     anguloHomDerecho = 360.0f;
                     estadoHomDerecho = 2;
                 }
             }
-            else if (estadoHomDerecho == 2)
-            {
+            else if (estadoHomDerecho == 2) {
                 homDerechoPosZ -= VELOCIDAD_HOM_DERECHO * deltaTime;
-                if (homDerechoPosZ <= 0.0f)
-                {
+                if (homDerechoPosZ <= 0.0f) {
                     homDerechoPosZ = 0.0f;
                     estadoHomDerecho = 3;
                     tiempoGiroHomDerecho = 0.0f;
@@ -1139,25 +1360,20 @@ int main()
                     anguloFinalHomDerecho = 180.0f;
                 }
             }
-            else if (estadoHomDerecho == 3)
-            {
+            else if (estadoHomDerecho == 3) {
                 tiempoGiroHomDerecho += deltaTime;
                 float progresoGiroHomDerecho = glm::clamp(tiempoGiroHomDerecho / DURACION_GIRO_HOM_DERECHO, 0.0f, 1.0f);
                 anguloHomDerecho = glm::mix(anguloInicialHomDerecho, anguloFinalHomDerecho, progresoGiroHomDerecho);
-                if (progresoGiroHomDerecho >= 1.0f)
-                {
+                if (progresoGiroHomDerecho >= 1.0f) {
                     anguloHomDerecho = 180.0f;
                     estadoHomDerecho = 0;
                 }
             }
         }
 
-        // Hombre Puente (Automático)
-        if (estadoHomPuente == 0)
-        {
+        if (estadoHomPuente == 0) {
             homPuentePosX += VELOCIDAD_HOM_PUENTE * deltaTime;
-            if (homPuentePosX >= HOM_PUENTE_FINAL_X)
-            {
+            if (homPuentePosX >= HOM_PUENTE_FINAL_X) {
                 homPuentePosX = HOM_PUENTE_FINAL_X;
                 estadoHomPuente = 1;
                 tiempoGiroHomPuente = 0.0f;
@@ -1165,22 +1381,18 @@ int main()
                 anguloFinalHomPuente = 270.0f;
             }
         }
-        else if (estadoHomPuente == 1)
-        {
+        else if (estadoHomPuente == 1) {
             tiempoGiroHomPuente += deltaTime;
             float progresoGiroPuente = glm::clamp(tiempoGiroHomPuente / DURACION_GIRO_HOM_PUENTE, 0.0f, 1.0f);
             anguloHomPuente = glm::mix(anguloInicialHomPuente, anguloFinalHomPuente, progresoGiroPuente);
-            if (progresoGiroPuente >= 1.0f)
-            {
+            if (progresoGiroPuente >= 1.0f) {
                 anguloHomPuente = 270.0f;
                 estadoHomPuente = 2;
             }
         }
-        else if (estadoHomPuente == 2)
-        {
+        else if (estadoHomPuente == 2) {
             homPuentePosX -= VELOCIDAD_HOM_PUENTE * deltaTime;
-            if (homPuentePosX <= HOM_PUENTE_INICIO_X)
-            {
+            if (homPuentePosX <= HOM_PUENTE_INICIO_X) {
                 homPuentePosX = HOM_PUENTE_INICIO_X;
                 estadoHomPuente = 3;
                 tiempoGiroHomPuente = 0.0f;
@@ -1188,23 +1400,19 @@ int main()
                 anguloFinalHomPuente = 90.0f;
             }
         }
-        else if (estadoHomPuente == 3)
-        {
+        else if (estadoHomPuente == 3) {
             tiempoGiroHomPuente += deltaTime;
             float progresoGiroPuente = glm::clamp(tiempoGiroHomPuente / DURACION_GIRO_HOM_PUENTE, 0.0f, 1.0f);
             anguloHomPuente = glm::mix(anguloInicialHomPuente, anguloFinalHomPuente, progresoGiroPuente);
-            if (progresoGiroPuente >= 1.0f)
-            {
+            if (progresoGiroPuente >= 1.0f) {
                 anguloHomPuente = 90.0f;
                 estadoHomPuente = 0;
             }
         }
 
-        // ======================================================================================
-        // 3. DIBUJO DE MODELOS ANIMADOS (OPTIMIZACIÓN DE CPU: DISTANCIA Y CACHÉ EN REPOSO)
-        // ======================================================================================
-
-        // Mujer Sola (con gesto cinemático)
+        // =======================================================================
+        // 3. DIBUJO DE MODELOS ANIMADOS (OPTIMIZACIÓN DE CPU)
+        // =======================================================================
         glm::vec3 posMujSola(-30.0f, -7.8f, -100.0f + mujSoloPos_Z);
         bool mueveMujSola = (animarMujerSola && (estadoMujSolo == 0 || estadoMujSolo == 4));
 
@@ -1224,7 +1432,6 @@ int main()
         glUniformMatrix4fv(locModel, 1, GL_FALSE, glm::value_ptr(modelAnim));
         Muj.Draw(lightingShader);
 
-        // ================= MUJER 1 =================
         glm::vec3 posMuj1(30.0f, -7.8f, -100.0f + recorridoMujer1.posicionZ);
         bool mueveMuj1 = (animarMujer1 && !recorridoMujer1.girando);
 
@@ -1243,7 +1450,6 @@ int main()
         glUniformMatrix4fv(locModel, 1, GL_FALSE, glm::value_ptr(modelAnim));
         Muj1.Draw(lightingShader);
 
-        // ================= MUJER 2 =================
         glm::vec3 posMuj2(34.0f, -7.8f, -100.0f + recorridoMujer2.posicionZ);
         bool mueveMuj2 = (animarMujer2 && !recorridoMujer2.girando);
 
@@ -1262,7 +1468,6 @@ int main()
         glUniformMatrix4fv(locModel, 1, GL_FALSE, glm::value_ptr(modelAnim));
         Muj2.Draw(lightingShader);
 
-        // Hombre2 (Derecho)
         glm::vec3 posHom2(30.0f, -7.8f, POSICION_INICIAL_HOM_DERECHO_Z - homDerechoPosZ);
         bool mueveHom2 = (animarHombreDerecho && (estadoHomDerecho == 0 || estadoHomDerecho == 2));
 
@@ -1281,7 +1486,6 @@ int main()
         glUniformMatrix4fv(locModel, 1, GL_FALSE, glm::value_ptr(modelAnim));
         Hom2.Draw(lightingShader);
 
-        // Hombre Saludando
         glm::vec3 posHomS(1.0f, -5.0f, -56.0f);
         if (glm::distance(camera.GetPosition(), posHomS) < MAX_DIST) {
             if (animarHombreSaludo) {
@@ -1297,7 +1501,6 @@ int main()
         glUniformMatrix4fv(locModel, 1, GL_FALSE, glm::value_ptr(modelAnim));
         HomS.Draw(lightingShader);
 
-        // Hombre Borracho
         glm::mat4 matrizBaseBorracho = glm::translate(glm::mat4(1.0f), posBaseBorracho);
         matrizBaseBorracho = glm::rotate(matrizBaseBorracho, glm::radians(rotacionBaseBorracho), glm::vec3(0.0f, 1.0f, 0.0f));
         glm::vec3 posLocalHomB(homPuentePosX, 0.0f, 0.0f);
@@ -1319,7 +1522,6 @@ int main()
         glUniformMatrix4fv(locModel, 1, GL_FALSE, glm::value_ptr(modelAnim));
         HomB.Draw(lightingShader);
 
-        // Mujer Saludando
         glm::vec3 posMujS(-2.0f, -5.0f, -56.0f);
         if (glm::distance(camera.GetPosition(), posMujS) < MAX_DIST) {
             if (animarMujerSaludo) {
@@ -1338,17 +1540,14 @@ int main()
         glBindVertexArray(0);
 
         // =======================================================================
-        // 4. LAS 4 LÁMPARAS DE LOS EDIFICIOS
+        // 4. DIBUJO DE LÁMPARAS Y LLAMAS
         // =======================================================================
         lampShader.Use();
         glUniformMatrix4fv(locLampView, 1, GL_FALSE, glm::value_ptr(view));
         glUniformMatrix4fv(locLampProj, 1, GL_FALSE, glm::value_ptr(projection));
-
-        // Color estático para lámparas de edificios
         glUniform3f(locLampColor, 1.0f, 1.0f, 1.0f);
 
-        for (GLuint i = 0; i < 4; i++)
-        {
+        for (GLuint i = 0; i < 4; i++) {
             model = glm::translate(glm::mat4(1.0f), pointLightPositions[i]);
             model = glm::scale(model, glm::vec3(0.3f));
             glUniformMatrix4fv(locLampModel, 1, GL_FALSE, glm::value_ptr(model));
@@ -1356,7 +1555,6 @@ int main()
             glDrawArrays(GL_TRIANGLES, 0, 36);
         }
 
-        // Llama sobre los botes de almas
         float intensidadLlama = 0.96f + 0.04f * std::sin(currentFrame * 7.0f);
         glUniform3f(locLampColor, intensidadLlama, 0.78f * intensidadLlama, 0.20f * intensidadLlama);
 
@@ -1375,7 +1573,7 @@ int main()
         glBindVertexArray(0);
 
         // =======================================================================
-        // 5. SKYBOX DIBUJADO AL FINAL (Optimización Overdraw)
+        // 5. SKYBOX 
         // =======================================================================
         glDepthFunc(GL_LEQUAL);
         skyboxShader.Use();
@@ -1417,6 +1615,7 @@ int main()
 
 void DoMovement()
 {
+    // CÁMARA
     if (keys[GLFW_KEY_W] || keys[GLFW_KEY_UP])
         camera.ProcessKeyboard(FORWARD, deltaTime);
     if (keys[GLFW_KEY_S] || keys[GLFW_KEY_DOWN])
@@ -1425,6 +1624,41 @@ void DoMovement()
         camera.ProcessKeyboard(LEFT, deltaTime);
     if (keys[GLFW_KEY_D] || keys[GLFW_KEY_RIGHT])
         camera.ProcessKeyboard(RIGHT, deltaTime);
+
+    // =====================================================
+    // CONSTRUCCIÓN MANUAL DE KEYFRAMES (Tu Personaje)
+    // =====================================================
+    if (keys[GLFW_KEY_T]) posPersonaje.x -= 0.05f;
+    if (keys[GLFW_KEY_G]) posPersonaje.x += 0.05f;
+    if (keys[GLFW_KEY_Y]) posPersonaje.y += 0.05f;
+    if (keys[GLFW_KEY_H]) posPersonaje.y -= 0.05f;
+    if (keys[GLFW_KEY_U]) posPersonaje.z -= 0.05f;
+    if (keys[GLFW_KEY_J]) posPersonaje.z += 0.05f;
+
+    if (keys[GLFW_KEY_I]) rotPersonajeY += 1.0f;
+    if (keys[GLFW_KEY_K]) rotPersonajeY -= 1.0f;
+
+    if (keys[GLFW_KEY_O]) anguloTorsoX += 1.0f;
+    if (keys[GLFW_KEY_L]) anguloTorsoX -= 1.0f;
+
+    if (keys[GLFW_KEY_C]) anguloCabezaX += 1.0f;
+    if (keys[GLFW_KEY_V]) anguloCabezaX -= 1.0f;
+
+    if (keys[GLFW_KEY_3]) anguloBrazoIzqX += 1.0f;
+    if (keys[GLFW_KEY_4]) anguloBrazoIzqX -= 1.0f;
+
+    if (keys[GLFW_KEY_5]) anguloBrazoDerX += 1.0f;
+    if (keys[GLFW_KEY_6]) anguloBrazoDerX -= 1.0f;
+
+    if (keys[GLFW_KEY_7]) anguloPiernaIzqX += 1.0f;
+    if (keys[GLFW_KEY_8]) anguloPiernaIzqX -= 1.0f;
+
+    if (keys[GLFW_KEY_9]) anguloPiernaDerX += 1.0f;
+    if (keys[GLFW_KEY_0]) anguloPiernaDerX -= 1.0f;
+
+    // Escalar la Linterna
+    if (keys[GLFW_KEY_LEFT_BRACKET])  escalaLinterna9 -= 0.01f; // Tecla [
+    if (keys[GLFW_KEY_RIGHT_BRACKET]) escalaLinterna9 += 0.01f; // Tecla ]
 }
 
 void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mode)
@@ -1464,6 +1698,48 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mode
         case GLFW_KEY_B: animarBotes = !animarBotes; break;
         case GLFW_KEY_1: animarLinternasAvance = !animarLinternasAvance; break;
         case GLFW_KEY_2: animarLinternasBalanceo = !animarLinternasBalanceo; break;
+
+            // ===============================================
+            // SISTEMA DE KEYFRAMES 
+            // ===============================================
+        case GLFW_KEY_F1:
+            saveFrame();
+            break;
+
+        case GLFW_KEY_F2:
+            if (play == false && (FrameIndex > 1)) {
+                resetElements();
+                interpolation();
+                play = true;
+                playIndex = 0;
+                i_curr_steps = 0;
+            }
+            else {
+                play = false;
+            }
+            break;
+
+        case GLFW_KEY_F3:
+            saveAnimationToFile();
+            break;
+
+        case GLFW_KEY_F4:
+            loadAnimationFromFile();
+            break;
+
+        case GLFW_KEY_F5:
+            resetElements();
+            break;
+
+        case GLFW_KEY_COMMA: // Tecla ,
+            linternaEnAgua = true;
+            std::cout << "Marca: Soltar Linterna en el Agua" << std::endl;
+            break;
+
+        case GLFW_KEY_PERIOD: // Tecla .
+            linternaEnAgua = false;
+            std::cout << "Marca: Linterna sostenida" << std::endl;
+            break;
         }
     }
 }
