@@ -47,7 +47,7 @@ GLfloat lastY = HEIGHT / 2.0;
 bool keys[1024];
 bool firstMouse = true;
 
-// Activación individual de animaciones (Compañero)
+// Activación individual de animaciones
 bool animarMujer1 = false;
 bool animarMujer2 = false;
 bool animarMujerSola = false;
@@ -57,9 +57,39 @@ bool animarMujerSaludo = false;
 bool animarBotes = false;
 float tiempoAnimacionBotes = 0.0f;
 
+// --- CONTROLES DE LINTERNAS (Tōrō) ---
+bool animarLinternasAvance = false;   
+bool animarLinternasBalanceo = false; 
+
+const float VELOCIDAD_LINTERNAS = 2.5f;
+const float Z_INICIO_LINTERNAS = 13.0f;
+const float Z_FIN_LINTERNAS = -130.0f;
+const int NUM_LINTERNAS = 8;
+
+struct LinternaAnimada {
+    glm::vec3 posicionBase;
+    float progresoZ;
+    float faseBalanceo;
+};
+LinternaAnimada linternas[NUM_LINTERNAS];
+
+void InicializarLinternas() {
+    float separacionZ = (Z_INICIO_LINTERNAS - Z_FIN_LINTERNAS) / 4.0f;
+    for (int i = 0; i < 4; i++) {
+        // Fila Izquierda
+        linternas[i].posicionBase = glm::vec3(-6.0f, -9.8f, Z_INICIO_LINTERNAS - (i * separacionZ));
+        linternas[i].progresoZ = 0.0f;
+        linternas[i].faseBalanceo = i * 1.2f;
+
+        // Fila Derecha
+        linternas[i + 4].posicionBase = glm::vec3(6.0f, -9.8f, Z_INICIO_LINTERNAS - (i * separacionZ));
+        linternas[i + 4].progresoZ = 0.0f;
+        linternas[i + 4].faseBalanceo = (i + 4) * 0.8f;
+    }
+}
+
 // Light attributes
 glm::vec3 lightPos(0.0f, 0.0f, 0.0f);
-bool active;
 
 // --- CONFIGURACIÓN DE LA LUNA ---
 float radioLuna = 350.0f;
@@ -70,10 +100,14 @@ bool animarLuna = false;
 // --- SKYBOX TINT ---
 const glm::vec3 SKY_TINT(1.0f, 1.0f, 1.0f);
 
-// Recorridos individuales de las dos mujeres (Compañero)
+// Recorridos individuales de las dos mujeres
 const float VELOCIDAD_MUJ = 1.5f;
 const float DISTANCIA_MUJ = 40.0f;
 const float DURACION_GIRO_MUJ = 0.8f;
+
+//Hombre borracho
+glm::vec3 posBaseBorracho(-47.0f, -3.6f, -20.0f);
+float rotacionBaseBorracho = 270.0f;
 
 struct RecorridoMujer
 {
@@ -135,7 +169,7 @@ static void ActualizarRecorridoMujer(RecorridoMujer& mujer, float delta)
 // Recorrido independiente de la MUJER QUE ESTÁ SOLA (Muj)
 float mujSoloPos_Z = 0.0f;
 const float DISTANCIA_MUJ_SOLO = 68.0f;
-int estadoMujSolo = 0; // 0: camina, 1: gira al agua, 2: se ala, 3: gira, 4: regresa, 5: gira al inicio
+int estadoMujSolo = 0; // 0: camina, 1: gira al agua, 2: señala, 3: gira, 4: regresa, 5: gira al inicio
 float tiempoGiroMujSolo = 0.0f;
 float tiempoDetenidaMujSolo = 0.0f;
 float anguloMujSolo = 0.0f;
@@ -156,9 +190,9 @@ float anguloInicialHomDerecho = 180.0f;
 float anguloFinalHomDerecho = 360.0f;
 
 // Recorrido del hombre que camina por el lado izquierdo del puente
-float homPuentePosX = -24.0f;
-const float HOM_PUENTE_INICIO_X = -24.0f;
-const float HOM_PUENTE_FINAL_X = -8.0f;
+float homPuentePosX = 0.0f;
+const float HOM_PUENTE_INICIO_X = 0.0f;
+const float HOM_PUENTE_FINAL_X = 16.0f;
 const float VELOCIDAD_HOM_PUENTE = 1.0f;
 int estadoHomPuente = 0;
 float tiempoGiroHomPuente = 0.0f;
@@ -167,7 +201,7 @@ float anguloInicialHomPuente = 90.0f;
 float anguloFinalHomPuente = 270.0f;
 const float DURACION_GIRO_HOM_PUENTE = 0.8f;
 
-// OPTIMIZACIÓN: Solo 4 luces estáticas en los edificios (Tuyo)
+// OPTIMIZACIÓN: Solo 4 luces estáticas en los edificios
 glm::vec3 pointLightPositions[] = {
     glm::vec3(-80.0f, 0.95f, 3.0f),    // Luz 0: Edificio Izquierdo 1
     glm::vec3(-84.0f, 0.95f, -110.0f), // Luz 1: Edificio Izquierdo 4
@@ -295,7 +329,7 @@ GLuint loadCubemap(std::vector<std::string> faces)
 }
 
 // =======================================================================
-// FUNCIONES DE CINEM TICA Y GESTOS
+// FUNCIONES DE CINEMÁTICA Y GESTOS
 // =======================================================================
 static glm::mat4 MatrizAssimp(const aiMatrix4x4& matriz)
 {
@@ -380,6 +414,7 @@ static void AplicarGestoBrazo(Model& personaje, std::vector<glm::mat4>& matrices
             matrices[indice] = antebrazo * brazo * matrices[indice];
     }
 }
+
 // =======================================================================
 // LÓGICA DE BOTES
 // =======================================================================
@@ -506,10 +541,11 @@ static glm::mat4 CrearTransformacionFlotante(
     model = glm::scale(model, escala);
     return model;
 }
-glm::vec3 Light1 = glm::vec3(0);
+
 // Deltatime
 GLfloat deltaTime = 0.0f;
 GLfloat lastFrame = 0.0f;
+
 int main()
 {
     glfwInit();
@@ -532,10 +568,12 @@ int main()
         return EXIT_FAILURE;
     }
     glViewport(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+
     // Shaders
     Shader lightingShader("Shader/lighting.vs", "Shader/lighting.frag");
     Shader lampShader("Shader/lamp.vs", "Shader/lamp.frag");
     Shader skyboxShader("Shader/SkyBox.vs", "Shader/SkyBox.frag");
+
     // Load Models
     Model arb((char*)"Models/arbol.obj");
     Model Mue((char*)"Models/muelle.obj");
@@ -546,7 +584,7 @@ int main()
     Model Muj((char*)"Models/mujer.fbx", "mujer.png");
     Model Muj1((char*)"Models/mujer1.fbx", "mujer1.png");
     Model Muj2((char*)"Models/mujer2.fbx", "mujer2.png");
-    Model Agu((char*)"Models/agua.obj"); // Usaremos tu objeto y la animaci n shader de tu compa ero
+    Model Agu((char*)"Models/agua.obj");
     Model Gor((char*)"Models/gorin.obj");
     Model HomS((char*)"Models/homsal.fbx", "hombre.png");
     Model HomB((char*)"Models/hombor.fbx", "hombre1.png");
@@ -557,6 +595,11 @@ int main()
     Model Edi2((char*)"Models/edificio2.obj");
     Model Edi3((char*)"Models/edificio3.obj");
     Model Luna((char*)"Models/moon.obj");
+    Model Puesto((char*)"Models/puesto.obj");
+    Model Far((char*)"Models/farol.obj");
+    Model Com((char*)"Models/comida.obj");
+    Model Lin((char*)"Models/linterna.obj");
+
     // Model VAO/VBO
     GLuint VBO, VAO;
     glGenVertexArrays(1, &VAO);
@@ -569,6 +612,7 @@ int main()
     glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
     glEnableVertexAttribArray(1);
     glBindVertexArray(0);
+
     // Skybox VAO/VBO
     GLuint skyboxVAO, skyboxVBO;
     glGenVertexArrays(1, &skyboxVAO);
@@ -579,6 +623,7 @@ int main()
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), (GLvoid*)0);
     glBindVertexArray(0);
+
     std::vector<std::string> faces;
     faces.push_back("Skybox/right.jpg");
     faces.push_back("Skybox/left.jpg");
@@ -587,8 +632,9 @@ int main()
     faces.push_back("Skybox/back.jpg");
     faces.push_back("Skybox/front.jpg");
     GLuint cubemapTexture = loadCubemap(faces);
+
     // =======================================================================
-    // OPTIMIZACIÓN: SOLO 4 LUCES DE EDIFICIOS Y 1 DIRECCIONAL (TUYO)
+    // OPTIMIZACIÓN: SOLO 4 LUCES DE EDIFICIOS Y 1 DIRECCIONAL
     // =======================================================================
     lightingShader.Use();
     glUniform1i(glGetUniformLocation(lightingShader.Program, "Material.difuse"), 0);
@@ -607,9 +653,11 @@ int main()
     GLint locDirLightAmb = glGetUniformLocation(lightingShader.Program, "dirLight.ambient");
     GLint locDirLightDiff = glGetUniformLocation(lightingShader.Program, "dirLight.diffuse");
     GLint locDirLightSpec = glGetUniformLocation(lightingShader.Program, "dirLight.specular");
+
     struct PointLightLocs {
         GLint pos, amb, diff, spec, constant, linear, quad;
-    } locPointLights[4]; // Reducido estrictamente a 4 luces
+    } locPointLights[4];
+
     for (int i = 0; i < 4; i++) {
         std::string prefix = "pointLights[" + std::to_string(i) + "].";
         locPointLights[i].pos = glGetUniformLocation(lightingShader.Program, (prefix + "position").c_str());
@@ -620,17 +668,26 @@ int main()
         locPointLights[i].linear = glGetUniformLocation(lightingShader.Program, (prefix + "linear").c_str());
         locPointLights[i].quad = glGetUniformLocation(lightingShader.Program, (prefix + "quadratic").c_str());
     }
+
     skyboxShader.Use();
     GLint locSkyView = glGetUniformLocation(skyboxShader.Program, "view");
     GLint locSkyProj = glGetUniformLocation(skyboxShader.Program, "projection");
     GLint locSkyTint = glGetUniformLocation(skyboxShader.Program, "skyTint");
     GLint locSkybox = glGetUniformLocation(skyboxShader.Program, "skybox");
+
     lampShader.Use();
     GLint locLampModel = glGetUniformLocation(lampShader.Program, "model");
     GLint locLampView = glGetUniformLocation(lampShader.Program, "view");
     GLint locLampProj = glGetUniformLocation(lampShader.Program, "projection");
     GLint locLampColor = glGetUniformLocation(lampShader.Program, "lampColor");
+
     glm::mat4 projection = glm::perspective(camera.GetZoom(), (GLfloat)SCREEN_WIDTH / (GLfloat)SCREEN_HEIGHT, 1.0f, 1000.0f);
+
+    // Distancia máxima para actualizar animaciones y no sobrecargar la CPU
+    const float MAX_DIST = 150.0f;
+
+    InicializarLinternas();
+
     // Game loop
     while (!glfwWindowShouldClose(window))
     {
@@ -639,7 +696,7 @@ int main()
         lastFrame = currentFrame;
         glfwPollEvents();
         DoMovement();
-        // Actualización de botes controlada por tecla 'B' (Compañero)
+
         if (animarBotes)
         {
             tiempoAnimacionBotes += glm::clamp(deltaTime, 0.0f, 0.05f);
@@ -656,8 +713,10 @@ int main()
             tiempoAnimacionBotes, boteDerecho.faseBalanceo, glm::vec3(0.0f, 0.47f, 0.0f),
             0.12f, 10.0f
         );
+
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
         // =======================================================================
         // 1. CONFIGURAR LUCES Y SHADER PRINCIPAL DE ILUMINACIÓN
         // =======================================================================
@@ -666,20 +725,20 @@ int main()
         glUniform1f(locBrilloLampara, 0.0f);
         glUniform1i(locIsWater, 0);
         glUniform3f(locViewPos, camera.GetPosition().x, camera.GetPosition().y, camera.GetPosition().z);
-        // Posición de la Luna
+
         if (animarLuna) {
             movelightPos += 0.15f * deltaTime;
         }
         float lunaX = radioLuna * cos(movelightPos);
         float lunaZ = radioLuna * sin(movelightPos);
         glm::vec3 posicionLuna(lunaX, alturaLuna, lunaZ);
-        // Luz Direccional de Luna
+
         glm::vec3 dirLuna = glm::normalize(-posicionLuna);
         glUniform3f(locDirLightDir, dirLuna.x, dirLuna.y, dirLuna.z);
         glUniform3f(locDirLightAmb, 0.12f, 0.15f, 0.22f);
         glUniform3f(locDirLightDiff, 0.35f, 0.42f, 0.55f);
         glUniform3f(locDirLightSpec, 0.45f, 0.50f, 0.65f);
-        // 4 Luces Puntuales de Edificios (Tuyo)
+
         for (int i = 0; i < 4; i++) {
             glUniform3f(locPointLights[i].pos, pointLightPositions[i].x, pointLightPositions[i].y, pointLightPositions[i].z);
             glUniform3f(locPointLights[i].amb, 0.08f, 0.04f, 0.01f);
@@ -690,112 +749,239 @@ int main()
             glUniform1f(locPointLights[i].quad, 0.0002f);
         }
         glUniform1f(glGetUniformLocation(lightingShader.Program, "material.shininess"), 16.0f);
+
         glm::mat4 view = camera.GetViewMatrix();
         glUniformMatrix4fv(locView, 1, GL_FALSE, glm::value_ptr(view));
         glUniformMatrix4fv(locProj, 1, GL_FALSE, glm::value_ptr(projection));
         glm::mat4 model = glm::mat4(1.0f);
+
         // =======================================================================
-        // 2. DIBUJO DE MODELOS EST TICOS
+        // 2. DIBUJO DE MODELOS ESTÁTICOS
         // =======================================================================
         model = glm::translate(glm::mat4(1.0f), glm::vec3(-45.0f, -3.5f, -60.0f));
         model = glm::scale(model, glm::vec3(10.0f));
         glUniformMatrix4fv(locModel, 1, GL_FALSE, glm::value_ptr(model));
         glUniform1i(locTransparency, 0);
         arb.Draw(lightingShader);
+
         model = glm::translate(glm::mat4(1.0f), glm::vec3(45.0f, -3.5f, -60.0f));
         model = glm::scale(model, glm::vec3(10.0f));
         glUniformMatrix4fv(locModel, 1, GL_FALSE, glm::value_ptr(model));
         arb.Draw(lightingShader);
+
         model = glm::translate(glm::mat4(1.0f), glm::vec3(-40.0f, -10.0f, -22.0f));
         model = glm::scale(model, glm::vec3(40.0f));
         model = glm::rotate(model, glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
         glUniformMatrix4fv(locModel, 1, GL_FALSE, glm::value_ptr(model));
         Mue.Draw(lightingShader);
+
         model = glm::translate(glm::mat4(1.0f), glm::vec3(-40.0f, -10.0f, -97.0f));
         model = glm::scale(model, glm::vec3(40.0f));
         model = glm::rotate(model, glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
         glUniformMatrix4fv(locModel, 1, GL_FALSE, glm::value_ptr(model));
         Mue1.Draw(lightingShader);
+
         model = glm::translate(glm::mat4(1.0f), glm::vec3(40.0f, -10.0f, -22.0f));
         model = glm::scale(model, glm::vec3(40.0f));
         model = glm::rotate(model, glm::radians(270.0f), glm::vec3(0.0f, 1.0f, 0.0f));
         glUniformMatrix4fv(locModel, 1, GL_FALSE, glm::value_ptr(model));
         Mue1.Draw(lightingShader);
+
         model = glm::translate(glm::mat4(1.0f), glm::vec3(40.0f, -10.0f, -97.0f));
         model = glm::scale(model, glm::vec3(40.0f));
         model = glm::rotate(model, glm::radians(270.0f), glm::vec3(0.0f, 1.0f, 0.0f));
         glUniformMatrix4fv(locModel, 1, GL_FALSE, glm::value_ptr(model));
         Mue.Draw(lightingShader);
+
         model = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, -10.0f, -90.0f));
         model = glm::scale(model, glm::vec3(20.0f));
         model = glm::rotate(model, glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
         glUniformMatrix4fv(locModel, 1, GL_FALSE, glm::value_ptr(model));
         Tor.Draw(lightingShader);
+
+        // Puesto de preparación 1 izquierdo
+        model = glm::translate(glm::mat4(1.0f), glm::vec3(-33.2f, -8.0f, 12.0f));
+        model = glm::scale(model, glm::vec3(4.0f, 4.0f, 4.0f));
+        model = glm::rotate(model, glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+        glUniformMatrix4fv(locModel, 1, GL_FALSE, glm::value_ptr(model));
+        Puesto.Draw(lightingShader);
+
+        // Puesto de preparación 2 derecho
+        model = glm::translate(glm::mat4(1.0f), glm::vec3(33.2f, -8.0f, -130.0f));
+        model = glm::scale(model, glm::vec3(4.0f, 4.0f, 4.0f));
+        glUniformMatrix4fv(locModel, 1, GL_FALSE, glm::value_ptr(model));
+        Puesto.Draw(lightingShader);
+
+        // brillo para que los faroles destaquen de noche
+        glUniform1f(locBrilloLampara, 0.35f);
+
+        // Farol izquierdo 1
+        model = glm::translate(glm::mat4(1.0f), glm::vec3(46.0f, -4.0f, 12.0f));
+        model = glm::scale(model, glm::vec3(8.0f, 8.0f, 8.0f));
+        model = glm::rotate(model, glm::radians(270.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+        glUniformMatrix4fv(locModel, 1, GL_FALSE, glm::value_ptr(model));
+        Far.Draw(lightingShader);
+
+        // Farol izquierdo 2
+        model = glm::translate(glm::mat4(1.0f), glm::vec3(46.0f, -4.0f, -130.0f));
+        model = glm::scale(model, glm::vec3(8.0f, 8.0f, 8.0f));
+        glUniformMatrix4fv(locModel, 1, GL_FALSE, glm::value_ptr(model));
+        Far.Draw(lightingShader);
+
+        // Farol derecho 1
+        model = glm::translate(glm::mat4(1.0f), glm::vec3(-46.0f, -4.0f, 12.0f));
+        model = glm::scale(model, glm::vec3(8.0f, 8.0f, 8.0f));
+        model = glm::rotate(model, glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+        glUniformMatrix4fv(locModel, 1, GL_FALSE, glm::value_ptr(model));
+        Far.Draw(lightingShader);
+
+        // Farol derecho 2
+        model = glm::translate(glm::mat4(1.0f), glm::vec3(-46.0f, -4.0f, -130.0f));
+        model = glm::scale(model, glm::vec3(8.0f, 8.0f, 8.0f));
+        model = glm::rotate(model, glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+        glUniformMatrix4fv(locModel, 1, GL_FALSE, glm::value_ptr(model));
+        Far.Draw(lightingShader);
+
+        // Apagar el brillo para los puestos de comida
+        glUniform1f(locBrilloLampara, 0.0f);
+
+        // Comida 1 izquierda
+        model = glm::translate(glm::mat4(1.0f), glm::vec3(-33.2f, -8.0f, -130.0f));
+        model = glm::scale(model, glm::vec3(4.0f, 4.0f, 4.0f));
+        glUniformMatrix4fv(locModel, 1, GL_FALSE, glm::value_ptr(model));
+        Com.Draw(lightingShader);
+
+        // Comida 2 derecha
+        model = glm::translate(glm::mat4(1.0f), glm::vec3(33.2f, -8.0f, 12.0f));
+        model = glm::scale(model, glm::vec3(4.0f, 4.0f, 4.0f));
+        model = glm::rotate(model, glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+        glUniformMatrix4fv(locModel, 1, GL_FALSE, glm::value_ptr(model));
+        Com.Draw(lightingShader);
+
+        // Encender el brillo con titileo para los botes
+        float pulsoBote = 0.45f + 0.08f * std::sin(currentFrame * 6.0f);
+        glUniform1f(locBrilloLampara, pulsoBote);
+
         glUniformMatrix4fv(locModel, 1, GL_FALSE, glm::value_ptr(modeloBoteIzquierdo));
         Sho.Draw(lightingShader);
+
         glUniformMatrix4fv(locModel, 1, GL_FALSE, glm::value_ptr(modeloBoteDerecho));
         Sho.Draw(lightingShader);
+
+        // =======================================================================
+        // LINTERNAS FLOTANTES (Tōrō)
+        // =======================================================================
+        float pulsoLinterna = 0.7f + 0.3f * std::sin(currentFrame * 5.0f);
+        glUniform1f(locBrilloLampara, pulsoLinterna); // Brillan igual que los botes
+
+        for (int i = 0; i < NUM_LINTERNAS; i++) {
+            // Animación de flujo colectivo con point clipping (Animación 3)
+            if (animarLinternasAvance) {
+                linternas[i].progresoZ -= VELOCIDAD_LINTERNAS * deltaTime; // Avanzan hacia -Z
+                float posActualZ = linternas[i].posicionBase.z + linternas[i].progresoZ;
+
+                // Point Clipping: Si cruzan el límite, regresan al inicio
+                if (posActualZ < Z_FIN_LINTERNAS) {
+                    linternas[i].progresoZ += (Z_INICIO_LINTERNAS - Z_FIN_LINTERNAS);
+                }
+            }
+
+            // Vaivén flotante sobre el agua (Animación 4) - INDEPENDIENTE
+            float anguloBalanceo = 0.0f;
+            float alturaBalanceo = 0.0f;
+            if (animarLinternasBalanceo) {
+                anguloBalanceo = std::sin(currentFrame * 2.0f + linternas[i].faseBalanceo) * 15.0f; // Inclinación
+                alturaBalanceo = std::cos(currentFrame * 1.5f + linternas[i].faseBalanceo) * 0.15f; // Sube y baja suavemente
+            }
+
+            // Posición final para dibujar
+            glm::vec3 posFinal = linternas[i].posicionBase + glm::vec3(0.0f, alturaBalanceo, linternas[i].progresoZ);
+
+            model = glm::translate(glm::mat4(1.0f), posFinal);
+            model = glm::rotate(model, glm::radians(anguloBalanceo), glm::vec3(0.0f, 0.0f, 1.0f)); // Rota en Z para tambaleo lateral
+            model = glm::scale(model, glm::vec3(1.5f)); // Ajusta el tamaño según necesites
+
+            glUniformMatrix4fv(locModel, 1, GL_FALSE, glm::value_ptr(model));
+            Lin.Draw(lightingShader);
+        }
+
+        // Apagamos el brillo para no afectar los modelos
+        glUniform1f(locBrilloLampara, 0.0f);
+
         model = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, -10.0f, -60.0f));
         model = glm::scale(model, glm::vec3(31.0f, 11.0f, 21.0f));
         glUniformMatrix4fv(locModel, 1, GL_FALSE, glm::value_ptr(model));
         Pue.Draw(lightingShader);
+
         model = glm::translate(glm::mat4(1.0f), glm::vec3(-45.0f, -3.6f, -32.0f));
         model = glm::scale(model, glm::vec3(3.0f));
         glUniformMatrix4fv(locModel, 1, GL_FALSE, glm::value_ptr(model));
         Gor.Draw(lightingShader);
+
         model = glm::translate(glm::mat4(1.0f), glm::vec3(45.0f, -3.6f, -32.0f));
         model = glm::scale(model, glm::vec3(3.0f));
         glUniformMatrix4fv(locModel, 1, GL_FALSE, glm::value_ptr(model));
         Gor.Draw(lightingShader);
+
         model = glm::translate(glm::mat4(1.0f), glm::vec3(-45.0f, -3.6f, -86.4f));
         model = glm::scale(model, glm::vec3(3.0f));
         glUniformMatrix4fv(locModel, 1, GL_FALSE, glm::value_ptr(model));
         Gor.Draw(lightingShader);
+
         model = glm::translate(glm::mat4(1.0f), glm::vec3(45.0f, -3.6f, -86.4f));
         model = glm::scale(model, glm::vec3(3.0f));
         glUniformMatrix4fv(locModel, 1, GL_FALSE, glm::value_ptr(model));
         Gor.Draw(lightingShader);
+
         // Edificios
         model = glm::translate(glm::mat4(1.0f), glm::vec3(-80.0f, 0.95f, 3.0f));
         model = glm::scale(model, glm::vec3(40.0f));
         model = glm::rotate(model, glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
         glUniformMatrix4fv(locModel, 1, GL_FALSE, glm::value_ptr(model));
         Edi.Draw(lightingShader);
+
         model = glm::translate(glm::mat4(1.0f), glm::vec3(-86.0f, 0.95f, -44.0f));
         model = glm::scale(model, glm::vec3(30.0f));
         model = glm::rotate(model, glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
         glUniformMatrix4fv(locModel, 1, GL_FALSE, glm::value_ptr(model));
         Edi1.Draw(lightingShader);
+
         model = glm::translate(glm::mat4(1.0f), glm::vec3(-78.2f, 0.95f, -71.4f));
         model = glm::scale(model, glm::vec3(30.0f));
         model = glm::rotate(model, glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
         glUniformMatrix4fv(locModel, 1, GL_FALSE, glm::value_ptr(model));
         Edi2.Draw(lightingShader);
+
         model = glm::translate(glm::mat4(1.0f), glm::vec3(-84.0f, 0.95f, -110.0f));
         model = glm::scale(model, glm::vec3(26.0f));
         model = glm::rotate(model, glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
         glUniformMatrix4fv(locModel, 1, GL_FALSE, glm::value_ptr(model));
         Edi3.Draw(lightingShader);
+
         model = glm::translate(glm::mat4(1.0f), glm::vec3(77.0f, 0.95f, 2.2f));
         model = glm::scale(model, glm::vec3(26.0f));
         model = glm::rotate(model, glm::radians(270.0f), glm::vec3(0.0f, 1.0f, 0.0f));
         glUniformMatrix4fv(locModel, 1, GL_FALSE, glm::value_ptr(model));
         Edi2.Draw(lightingShader);
+
         model = glm::translate(glm::mat4(1.0f), glm::vec3(80.0f, 0.95f, -46.2f));
         model = glm::scale(model, glm::vec3(40.0f));
         model = glm::rotate(model, glm::radians(270.0f), glm::vec3(0.0f, 1.0f, 0.0f));
         glUniformMatrix4fv(locModel, 1, GL_FALSE, glm::value_ptr(model));
         Edi.Draw(lightingShader);
+
         model = glm::translate(glm::mat4(1.0f), glm::vec3(90.0f, 0.95f, -121.0f));
         model = glm::scale(model, glm::vec3(38.0f));
         model = glm::rotate(model, glm::radians(270.0f), glm::vec3(0.0f, 1.0f, 0.0f));
         glUniformMatrix4fv(locModel, 1, GL_FALSE, glm::value_ptr(model));
         Edi1.Draw(lightingShader);
+
         model = glm::translate(glm::mat4(1.0f), glm::vec3(85.0f, 0.95f, -84.0f));
         model = glm::scale(model, glm::vec3(26.0f));
         model = glm::rotate(model, glm::radians(270.0f), glm::vec3(0.0f, 1.0f, 0.0f));
         glUniformMatrix4fv(locModel, 1, GL_FALSE, glm::value_ptr(model));
         Edi3.Draw(lightingShader);
+
         // Luna
         model = glm::translate(glm::mat4(1.0f), posicionLuna);
         float anguloLunaY = atan2(posicionLuna.x, posicionLuna.z);
@@ -803,13 +989,13 @@ int main()
         model = glm::scale(model, glm::vec3(1.0f));
         glUniformMatrix4fv(locModel, 1, GL_FALSE, glm::value_ptr(model));
         Luna.Draw(lightingShader);
+
         // ======================================================================================
-        // LÓGICA DE RECORRIDOS INDIVIDUALES POR TECLA (Compañero)
+        // LÓGICA DE RECORRIDOS INDIVIDUALES POR TECLA
         // ======================================================================================
-        if (animarMujer1)
-            ActualizarRecorridoMujer(recorridoMujer1, deltaTime);
-        if (animarMujer2)
-            ActualizarRecorridoMujer(recorridoMujer2, deltaTime);
+        if (animarMujer1) ActualizarRecorridoMujer(recorridoMujer1, deltaTime);
+        if (animarMujer2) ActualizarRecorridoMujer(recorridoMujer2, deltaTime);
+
         if (animarMujerSola)
         {
             if (estadoMujSolo == 0)
@@ -889,6 +1075,7 @@ int main()
                 }
             }
         }
+
         // Hombre Derecho
         if (animarHombreDerecho)
         {
@@ -939,6 +1126,7 @@ int main()
                 }
             }
         }
+
         // Hombre Puente (Automático)
         if (estadoHomPuente == 0)
         {
@@ -986,95 +1174,154 @@ int main()
                 estadoHomPuente = 0;
             }
         }
+
         // ======================================================================================
-        // 3. DIBUJO DE MODELOS ANIMADOS (OPTIMIZACI N TUYA: ENV O MASIVO DE MATRICES)
+        // 3. DIBUJO DE MODELOS ANIMADOS (OPTIMIZACIÓN DE CPU: DISTANCIA Y CACHÉ EN REPOSO)
         // ======================================================================================
+
         // Mujer Sola (con gesto cinemático)
-        Muj.UpdateAnimation(
-            (animarMujerSola && (estadoMujSolo == 0 || estadoMujSolo == 4)) ? deltaTime : 0.0f,
-            Muj.GetScenePointer());
+        glm::vec3 posMujSola(-30.0f, -7.8f, -100.0f + mujSoloPos_Z);
+        bool mueveMujSola = (animarMujerSola && (estadoMujSolo == 0 || estadoMujSolo == 4));
+
+        if (glm::distance(camera.GetPosition(), posMujSola) < MAX_DIST) {
+            if (mueveMujSola || gestoMujSolo > 0.0f) {
+                Muj.UpdateAnimation(mueveMujSola ? deltaTime : 0.0f, Muj.GetScenePointer());
+            }
+        }
         std::vector<glm::mat4> transformsMujSolo = Muj.GetFinalBoneMatrices();
         AplicarGestoBrazo(Muj, transformsMujSolo, gestoMujSolo);
         if (!transformsMujSolo.empty()) {
             glUniformMatrix4fv(locBones, (GLsizei)transformsMujSolo.size(), GL_FALSE, glm::value_ptr(transformsMujSolo[0]));
         }
-        glm::mat4 modelAnim = glm::translate(glm::mat4(1.0f), glm::vec3(-30.0f, -7.8f, -100.0f + mujSoloPos_Z));
+        glm::mat4 modelAnim = glm::translate(glm::mat4(1.0f), posMujSola);
         modelAnim = glm::rotate(modelAnim, glm::radians(anguloMujSolo), glm::vec3(0.0f, 1.0f, 0.0f));
         modelAnim = glm::scale(modelAnim, glm::vec3(2.0f));
         glUniformMatrix4fv(locModel, 1, GL_FALSE, glm::value_ptr(modelAnim));
         Muj.Draw(lightingShader);
-        // Mujer1
-        Muj1.UpdateAnimation((animarMujer1 && !recorridoMujer1.girando) ? deltaTime : 0.0f, Muj1.GetScenePointer());
-        std::vector<glm::mat4> transforms = Muj1.GetFinalBoneMatrices();
-        if (!transforms.empty()) {
-            glUniformMatrix4fv(locBones, (GLsizei)transforms.size(), GL_FALSE, glm::value_ptr(transforms[0]));
+
+        // ================= MUJER 1 =================
+        glm::vec3 posMuj1(30.0f, -7.8f, -100.0f + recorridoMujer1.posicionZ);
+        bool mueveMuj1 = (animarMujer1 && !recorridoMujer1.girando);
+
+        if (glm::distance(camera.GetPosition(), posMuj1) < MAX_DIST) {
+            if (mueveMuj1) {
+                Muj1.UpdateAnimation(deltaTime, Muj1.GetScenePointer());
+            }
         }
-        modelAnim = glm::translate(glm::mat4(1.0f), glm::vec3(30.0f, -7.8f, -100.0f + recorridoMujer1.posicionZ));
+        std::vector<glm::mat4> transformsMuj1 = Muj1.GetFinalBoneMatrices();
+        if (!transformsMuj1.empty()) {
+            glUniformMatrix4fv(locBones, (GLsizei)transformsMuj1.size(), GL_FALSE, glm::value_ptr(transformsMuj1[0]));
+        }
+        modelAnim = glm::translate(glm::mat4(1.0f), posMuj1);
         modelAnim = glm::rotate(modelAnim, glm::radians(recorridoMujer1.angulo), glm::vec3(0.0f, 1.0f, 0.0f));
         modelAnim = glm::scale(modelAnim, glm::vec3(2.0f));
         glUniformMatrix4fv(locModel, 1, GL_FALSE, glm::value_ptr(modelAnim));
         Muj1.Draw(lightingShader);
-        // Mujer2
-        Muj2.UpdateAnimation((animarMujer2 && !recorridoMujer2.girando) ? deltaTime : 0.0f, Muj2.GetScenePointer());
-        transforms = Muj2.GetFinalBoneMatrices();
-        if (!transforms.empty()) {
-            glUniformMatrix4fv(locBones, (GLsizei)transforms.size(), GL_FALSE, glm::value_ptr(transforms[0]));
+
+        // ================= MUJER 2 =================
+        glm::vec3 posMuj2(34.0f, -7.8f, -100.0f + recorridoMujer2.posicionZ);
+        bool mueveMuj2 = (animarMujer2 && !recorridoMujer2.girando);
+
+        if (glm::distance(camera.GetPosition(), posMuj2) < MAX_DIST) {
+            if (mueveMuj2) {
+                Muj2.UpdateAnimation(deltaTime, Muj2.GetScenePointer());
+            }
         }
-        modelAnim = glm::translate(glm::mat4(1.0f), glm::vec3(34.0f, -7.8f, -100.0f + recorridoMujer2.posicionZ));
+        std::vector<glm::mat4> transformsMuj2 = Muj2.GetFinalBoneMatrices();
+        if (!transformsMuj2.empty()) {
+            glUniformMatrix4fv(locBones, (GLsizei)transformsMuj2.size(), GL_FALSE, glm::value_ptr(transformsMuj2[0]));
+        }
+        modelAnim = glm::translate(glm::mat4(1.0f), posMuj2);
         modelAnim = glm::rotate(modelAnim, glm::radians(recorridoMujer2.angulo), glm::vec3(0.0f, 1.0f, 0.0f));
         modelAnim = glm::scale(modelAnim, glm::vec3(2.0f));
         glUniformMatrix4fv(locModel, 1, GL_FALSE, glm::value_ptr(modelAnim));
         Muj2.Draw(lightingShader);
+
         // Hombre2 (Derecho)
-        Hom2.UpdateAnimation((animarHombreDerecho && (estadoHomDerecho == 0 || estadoHomDerecho == 2)) ? deltaTime : 0.0f, Hom2.GetScenePointer());
-        transforms = Hom2.GetFinalBoneMatrices();
-        if (!transforms.empty()) {
-            glUniformMatrix4fv(locBones, (GLsizei)transforms.size(), GL_FALSE, glm::value_ptr(transforms[0]));
+        glm::vec3 posHom2(30.0f, -7.8f, POSICION_INICIAL_HOM_DERECHO_Z - homDerechoPosZ);
+        bool mueveHom2 = (animarHombreDerecho && (estadoHomDerecho == 0 || estadoHomDerecho == 2));
+
+        if (glm::distance(camera.GetPosition(), posHom2) < MAX_DIST) {
+            if (mueveHom2) {
+                Hom2.UpdateAnimation(deltaTime, Hom2.GetScenePointer());
+            }
         }
-        modelAnim = glm::translate(glm::mat4(1.0f), glm::vec3(30.0f, -7.8f, POSICION_INICIAL_HOM_DERECHO_Z - homDerechoPosZ));
+        std::vector<glm::mat4> transformsHom2 = Hom2.GetFinalBoneMatrices();
+        if (!transformsHom2.empty()) {
+            glUniformMatrix4fv(locBones, (GLsizei)transformsHom2.size(), GL_FALSE, glm::value_ptr(transformsHom2[0]));
+        }
+        modelAnim = glm::translate(glm::mat4(1.0f), posHom2);
         modelAnim = glm::rotate(modelAnim, glm::radians(anguloHomDerecho), glm::vec3(0.0f, 1.0f, 0.0f));
         modelAnim = glm::scale(modelAnim, glm::vec3(2.0f));
         glUniformMatrix4fv(locModel, 1, GL_FALSE, glm::value_ptr(modelAnim));
         Hom2.Draw(lightingShader);
+
         // Hombre Saludando
-        HomS.UpdateAnimation(animarHombreSaludo ? deltaTime : 0.0f, HomS.GetScenePointer());
-        transforms = HomS.GetFinalBoneMatrices();
-        if (!transforms.empty()) {
-            glUniformMatrix4fv(locBones, (GLsizei)transforms.size(), GL_FALSE, glm::value_ptr(transforms[0]));
+        glm::vec3 posHomS(1.0f, -5.0f, -56.0f);
+        if (glm::distance(camera.GetPosition(), posHomS) < MAX_DIST) {
+            if (animarHombreSaludo) {
+                HomS.UpdateAnimation(deltaTime, HomS.GetScenePointer());
+            }
         }
-        modelAnim = glm::translate(glm::mat4(1.0f), glm::vec3(5.0f, -5.0f, -62.0f));
+        std::vector<glm::mat4> transformsHomS = HomS.GetFinalBoneMatrices();
+        if (!transformsHomS.empty()) {
+            glUniformMatrix4fv(locBones, (GLsizei)transformsHomS.size(), GL_FALSE, glm::value_ptr(transformsHomS[0]));
+        }
+        modelAnim = glm::translate(glm::mat4(1.0f), posHomS);
         modelAnim = glm::scale(modelAnim, glm::vec3(2.0f));
         glUniformMatrix4fv(locModel, 1, GL_FALSE, glm::value_ptr(modelAnim));
         HomS.Draw(lightingShader);
-        // Hombre Borracho (Puente)
-        HomB.UpdateAnimation(deltaTime, HomB.GetScenePointer());
-        transforms = HomB.GetFinalBoneMatrices();
-        if (!transforms.empty()) {
-            glUniformMatrix4fv(locBones, (GLsizei)transforms.size(), GL_FALSE, glm::value_ptr(transforms[0]));
+
+        // Hombre Borracho
+        glm::mat4 matrizBaseBorracho = glm::translate(glm::mat4(1.0f), posBaseBorracho);
+        matrizBaseBorracho = glm::rotate(matrizBaseBorracho, glm::radians(rotacionBaseBorracho), glm::vec3(0.0f, 1.0f, 0.0f));
+        glm::vec3 posLocalHomB(homPuentePosX, 0.0f, 0.0f);
+        glm::vec3 posRealHomB = glm::vec3(matrizBaseBorracho * glm::vec4(posLocalHomB, 1.0f));
+        bool mueveHomB = (estadoHomPuente == 0 || estadoHomPuente == 2);
+        if (glm::distance(camera.GetPosition(), posRealHomB) < MAX_DIST) {
+            if (mueveHomB) {
+                HomB.UpdateAnimation(deltaTime, HomB.GetScenePointer());
+            }
         }
-        modelAnim = glm::translate(glm::mat4(1.0f), glm::vec3(homPuentePosX, -5.0f, -62.0f));
+        std::vector<glm::mat4> transformsHomB = HomB.GetFinalBoneMatrices();
+        if (!transformsHomB.empty()) {
+            glUniformMatrix4fv(locBones, (GLsizei)transformsHomB.size(), GL_FALSE, glm::value_ptr(transformsHomB[0]));
+        }
+        modelAnim = matrizBaseBorracho;
+        modelAnim = glm::translate(modelAnim, posLocalHomB);
         modelAnim = glm::rotate(modelAnim, glm::radians(anguloHomPuente), glm::vec3(0.0f, 1.0f, 0.0f));
         modelAnim = glm::scale(modelAnim, glm::vec3(2.0f));
         glUniformMatrix4fv(locModel, 1, GL_FALSE, glm::value_ptr(modelAnim));
         HomB.Draw(lightingShader);
+
         // Mujer Saludando
-        MujS.UpdateAnimation(animarMujerSaludo ? deltaTime : 0.0f, MujS.GetScenePointer());
-        transforms = MujS.GetFinalBoneMatrices();
-        if (!transforms.empty()) {
-            glUniformMatrix4fv(locBones, (GLsizei)transforms.size(), GL_FALSE, glm::value_ptr(transforms[0]));
+        glm::vec3 posMujS(-2.0f, -5.0f, -56.0f);
+        if (glm::distance(camera.GetPosition(), posMujS) < MAX_DIST) {
+            if (animarMujerSaludo) {
+                MujS.UpdateAnimation(deltaTime, MujS.GetScenePointer());
+            }
         }
-        modelAnim = glm::translate(glm::mat4(1.0f), glm::vec3(10.0f, -5.0f, -62.0f));
+        std::vector<glm::mat4> transformsMujS = MujS.GetFinalBoneMatrices();
+        if (!transformsMujS.empty()) {
+            glUniformMatrix4fv(locBones, (GLsizei)transformsMujS.size(), GL_FALSE, glm::value_ptr(transformsMujS[0]));
+        }
+        modelAnim = glm::translate(glm::mat4(1.0f), posMujS);
         modelAnim = glm::scale(modelAnim, glm::vec3(2.0f));
         glUniformMatrix4fv(locModel, 1, GL_FALSE, glm::value_ptr(modelAnim));
         MujS.Draw(lightingShader);
+
         glBindVertexArray(0);
+
         // =======================================================================
-        // 4. DIBUJAR SOLO LAS 4 LÁMPARAS DE LOS EDIFICIOS (Tuyo)
+        // 4. LAS 4 LÁMPARAS DE LOS EDIFICIOS
         // =======================================================================
         lampShader.Use();
         glUniformMatrix4fv(locLampView, 1, GL_FALSE, glm::value_ptr(view));
         glUniformMatrix4fv(locLampProj, 1, GL_FALSE, glm::value_ptr(projection));
+
+        // Color estático para lámparas de edificios
         glUniform3f(locLampColor, 1.0f, 1.0f, 1.0f);
+
         for (GLuint i = 0; i < 4; i++)
         {
             model = glm::translate(glm::mat4(1.0f), pointLightPositions[i]);
@@ -1083,9 +1330,27 @@ int main()
             glBindVertexArray(VAO);
             glDrawArrays(GL_TRIANGLES, 0, 36);
         }
+
+        // Llama sobre los botes de almas
+        float intensidadLlama = 0.96f + 0.04f * std::sin(currentFrame * 7.0f);
+        glUniform3f(locLampColor, intensidadLlama, 0.78f * intensidadLlama, 0.20f * intensidadLlama);
+
+        glm::vec3 posLlamaIzq = glm::vec3(modeloBoteIzquierdo * glm::vec4(0.0f, 0.78f, 0.0f, 1.0f));
+        model = glm::translate(glm::mat4(1.0f), posLlamaIzq);
+        model = glm::scale(model, glm::vec3(0.14f, 0.17f, 0.14f));
+        glUniformMatrix4fv(locLampModel, 1, GL_FALSE, glm::value_ptr(model));
+        glDrawArrays(GL_TRIANGLES, 0, 36);
+
+        glm::vec3 posLlamaDer = glm::vec3(modeloBoteDerecho * glm::vec4(0.0f, 0.78f, 0.0f, 1.0f));
+        model = glm::translate(glm::mat4(1.0f), posLlamaDer);
+        model = glm::scale(model, glm::vec3(0.14f, 0.17f, 0.14f));
+        glUniformMatrix4fv(locLampModel, 1, GL_FALSE, glm::value_ptr(model));
+        glDrawArrays(GL_TRIANGLES, 0, 36);
+
         glBindVertexArray(0);
+
         // =======================================================================
-        // 5. SKYBOX DIBUJADO AL FINAL (Optimización Overdraw - Tuyo)
+        // 5. SKYBOX DIBUJADO AL FINAL (Optimización Overdraw)
         // =======================================================================
         glDepthFunc(GL_LEQUAL);
         skyboxShader.Use();
@@ -1101,6 +1366,7 @@ int main()
         glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
         glBindVertexArray(0);
         glDepthFunc(GL_LESS);
+
         // =======================================================================
         // 6. AGUA ANIMADA
         // =======================================================================
@@ -1116,11 +1382,14 @@ int main()
         glBindVertexArray(0);
         glUniform1i(locIsWater, 0);
         glUniform1i(locTransparency, 0);
+
         glfwSwapBuffers(window);
     }
+
     glfwTerminate();
     return 0;
 }
+
 void DoMovement()
 {
     if (keys[GLFW_KEY_W] || keys[GLFW_KEY_UP])
@@ -1131,14 +1400,8 @@ void DoMovement()
         camera.ProcessKeyboard(LEFT, deltaTime);
     if (keys[GLFW_KEY_D] || keys[GLFW_KEY_RIGHT])
         camera.ProcessKeyboard(RIGHT, deltaTime);
-    // Ajuste en tiempo real de Luz 0
-    if (keys[GLFW_KEY_T]) pointLightPositions[0].x += 0.01f;
-    if (keys[GLFW_KEY_G]) pointLightPositions[0].x -= 0.01f;
-    if (keys[GLFW_KEY_Y]) pointLightPositions[0].y += 0.01f;
-    if (keys[GLFW_KEY_H]) pointLightPositions[0].y -= 0.01f;
-    if (keys[GLFW_KEY_U]) pointLightPositions[0].z -= 0.1f;
-    if (keys[GLFW_KEY_J]) pointLightPositions[0].z += 0.01f;
 }
+
 void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mode)
 {
     if (GLFW_KEY_ESCAPE == key && GLFW_PRESS == action)
@@ -1157,16 +1420,12 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mode
         glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
         firstMouse = true;
     }
-    if (key == GLFW_KEY_SPACE && action == GLFW_PRESS)
-    {
-        active = !active;
-        Light1 = active ? glm::vec3(1.0f, 1.0f, 0.0f) : glm::vec3(0);
-    }
     if (key == GLFW_KEY_P && action == GLFW_PRESS)
     {
         animarLuna = !animarLuna;
     }
-    // Controles de animaciones individuales (Compañero)
+
+    // Controles de animaciones individuales
     if (action == GLFW_PRESS)
     {
         switch (key)
@@ -1178,9 +1437,12 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mode
         case GLFW_KEY_Z: animarHombreSaludo = !animarHombreSaludo; break;
         case GLFW_KEY_X: animarMujerSaludo = !animarMujerSaludo; break;
         case GLFW_KEY_B: animarBotes = !animarBotes; break;
+        case GLFW_KEY_1: animarLinternasAvance = !animarLinternasAvance; break;
+        case GLFW_KEY_2: animarLinternasBalanceo = !animarLinternasBalanceo; break;
         }
     }
 }
+
 void MouseCallback(GLFWwindow* window, double xPos, double yPos)
 {
     if (firstMouse)
