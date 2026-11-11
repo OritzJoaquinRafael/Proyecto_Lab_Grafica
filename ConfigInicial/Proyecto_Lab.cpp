@@ -135,7 +135,7 @@ static void ActualizarRecorridoMujer(RecorridoMujer& mujer, float delta)
 // Recorrido independiente de la MUJER QUE ESTÁ SOLA (Muj)
 float mujSoloPos_Z = 0.0f;
 const float DISTANCIA_MUJ_SOLO = 68.0f;
-int estadoMujSolo = 0; // 0: camina, 1: gira al agua, 2: señala, 3: gira, 4: regresa, 5: gira al inicio
+int estadoMujSolo = 0; // 0: camina, 1: gira al agua, 2: se ala, 3: gira, 4: regresa, 5: gira al inicio
 float tiempoGiroMujSolo = 0.0f;
 float tiempoDetenidaMujSolo = 0.0f;
 float anguloMujSolo = 0.0f;
@@ -295,7 +295,7 @@ GLuint loadCubemap(std::vector<std::string> faces)
 }
 
 // =======================================================================
-// FUNCIONES DE CINEMÁTICA Y GESTOS
+// FUNCIONES DE CINEM TICA Y GESTOS
 // =======================================================================
 static glm::mat4 MatrizAssimp(const aiMatrix4x4& matriz)
 {
@@ -546,7 +546,7 @@ int main()
     Model Muj((char*)"Models/mujer.fbx", "mujer.png");
     Model Muj1((char*)"Models/mujer1.fbx", "mujer1.png");
     Model Muj2((char*)"Models/mujer2.fbx", "mujer2.png");
-    Model Agu((char*)"Models/agua.obj");
+    Model Agu((char*)"Models/agua.obj"); // Usaremos tu objeto y la animaci n shader de tu compa ero
     Model Gor((char*)"Models/gorin.obj");
     Model HomS((char*)"Models/homsal.fbx", "hombre.png");
     Model HomB((char*)"Models/hombor.fbx", "hombre1.png");
@@ -695,7 +695,7 @@ int main()
         glUniformMatrix4fv(locProj, 1, GL_FALSE, glm::value_ptr(projection));
         glm::mat4 model = glm::mat4(1.0f);
         // =======================================================================
-        // 2. DIBUJO DE MODELOS ESTÁTICOS
+        // 2. DIBUJO DE MODELOS EST TICOS
         // =======================================================================
         model = glm::translate(glm::mat4(1.0f), glm::vec3(-45.0f, -3.5f, -60.0f));
         model = glm::scale(model, glm::vec3(10.0f));
@@ -987,7 +987,7 @@ int main()
             }
         }
         // ======================================================================================
-        // 3. DIBUJO DE MODELOS ANIMADOS
+        // 3. DIBUJO DE MODELOS ANIMADOS (OPTIMIZACI N TUYA: ENV O MASIVO DE MATRICES)
         // ======================================================================================
         // Mujer Sola (con gesto cinemático)
         Muj.UpdateAnimation(
