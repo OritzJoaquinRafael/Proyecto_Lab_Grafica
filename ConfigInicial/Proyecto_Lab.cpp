@@ -1858,7 +1858,7 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mode
         case GLFW_KEY_7: animarBotes = !animarBotes; break;
         case GLFW_KEY_8: animarLinternasAvance = !animarLinternasAvance; break;
         case GLFW_KEY_9: animarLinternasBalanceo = !animarLinternasBalanceo; break;
-
+        case GLFW_KEY_MINUS: animarHombrePuente = !animarHombrePuente; break;
 
             // ===============================================
             // SISTEMA DE KEYFRAMES 
