@@ -1769,19 +1769,19 @@ void DoMovement()
     // CONSTRUCCIÓN MANUAL DE KEYFRAMES (Tu Personaje)
     // =====================================================
 
-	// Control de posición del personaje
+    // Control de posición del personaje
     if (keys[GLFW_KEY_T]) posPersonaje.x -= 0.05f;
     if (keys[GLFW_KEY_G]) posPersonaje.x += 0.05f;
 
-	// Control de altura del personaje
+    // Control de altura del personaje
     if (keys[GLFW_KEY_Y]) posPersonaje.y += 0.05f;
     if (keys[GLFW_KEY_H]) posPersonaje.y -= 0.05f;
 
-	// Control de profundidad del personaje
+    // Control de profundidad del personaje
     if (keys[GLFW_KEY_U]) posPersonaje.z -= 0.05f;
     if (keys[GLFW_KEY_J]) posPersonaje.z += 0.05f;
 
-	// Control de giro del personaje
+    // Control de giro del personaje
     if (keys[GLFW_KEY_I]) rotPersonajeY += 1.0f;
     if (keys[GLFW_KEY_K]) rotPersonajeY -= 1.0f;
 
@@ -1789,34 +1789,34 @@ void DoMovement()
     if (keys[GLFW_KEY_O]) anguloTorsoX += 1.0f;
     if (keys[GLFW_KEY_L]) anguloTorsoX -= 1.0f;
 
-	// Control Cabeza
+    // Control Cabeza
     if (keys[GLFW_KEY_R]) anguloCabezaX += 1.0f;
     if (keys[GLFW_KEY_F]) anguloCabezaX -= 1.0f;
 
-	// Control Brazo Izquierdo
+    // Control Brazo Izquierdo
     if (keys[GLFW_KEY_E]) anguloBrazoIzqX += 1.0f;
     if (keys[GLFW_KEY_Q]) anguloBrazoIzqX -= 1.0f;
 
-	// Control Brazo Derecho
+    // Control Brazo Derecho
     if (keys[GLFW_KEY_B]) anguloBrazoDerX += 1.0f;
     if (keys[GLFW_KEY_V]) anguloBrazoDerX -= 1.0f;
 
-	// Control Pierna Izquierda
+    // Control Pierna Izquierda
     if (keys[GLFW_KEY_C]) anguloPiernaIzqX += 1.0f;
     if (keys[GLFW_KEY_X]) anguloPiernaIzqX -= 1.0f;
 
-	// Control Pierna Derecha
+    // Control Pierna Derecha
     if (keys[GLFW_KEY_P]) anguloPiernaDerX += 1.0f;
     if (keys[GLFW_KEY_Z]) anguloPiernaDerX -= 1.0f;
 
-	// Tamaño de la linterna
+    // Tamaño de la linterna
     if (keys[GLFW_KEY_LEFT_BRACKET])  escalaLinterna9 = glm::max(escalaLinterna9 - 0.01f, 0.0f);                 // Tecla [
     if (keys[GLFW_KEY_RIGHT_BRACKET]) escalaLinterna9 = glm::min(escalaLinterna9 + 0.01f, ESCALA_MAX_LINTERNA);  // Tecla ]
 }
 
 void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mode)
 {
-	// Cierra la ventana si se presiona ESC
+    // Cierra la ventana si se presiona ESC
     if (GLFW_KEY_ESCAPE == key && GLFW_PRESS == action)
         glfwSetWindowShouldClose(window, GL_TRUE);
     if (key >= 0 && key < 1024)
@@ -1827,11 +1827,11 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mode
             keys[key] = false;
     }
 
-	// Liberación del mouse
+    // Liberación del mouse
     if (key == GLFW_KEY_M && action == GLFW_PRESS)
         glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 
-	//Captura del mouse
+    //Captura del mouse
     if (key == GLFW_KEY_N && action == GLFW_PRESS)
     {
         glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
@@ -1860,16 +1860,16 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mode
         case GLFW_KEY_9: animarLinternasBalanceo = !animarLinternasBalanceo; break;
 
 
-        // ===============================================
-        // SISTEMA DE KEYFRAMES 
-        // ===============================================
-       
-		// Guardar keyframe
+            // ===============================================
+            // SISTEMA DE KEYFRAMES 
+            // ===============================================
+
+            // Guardar keyframe
         case GLFW_KEY_F1:
             saveFrame();
             break;
 
-		// Reproducir animación
+            // Reproducir animación
         case GLFW_KEY_F2:
             if (play == false && (FrameIndex > 1)) {
                 resetElements();
@@ -1883,28 +1883,28 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mode
             }
             break;
 
-		// Guardar animación en archivo
+            // Guardar animación en archivo
         case GLFW_KEY_F3:
             saveAnimationToFile();
             break;
 
-		// Cargar animación desde archivo
+            // Cargar animación desde archivo
         case GLFW_KEY_F4:
             loadAnimationFromFile();
             break;
 
-		// Resetear elementos
+            // Resetear elementos
         case GLFW_KEY_F5:
             resetElements();
             break;
 
-        //
+            //
         case GLFW_KEY_COMMA: // Tecla ,
             if (!linternaEnAgua) SoltarLinternaEnAgua();
             std::cout << "Marca: Soltar Linterna en el Agua" << std::endl;
             break;
 
-        //
+            //
         case GLFW_KEY_PERIOD: // Tecla .
             linternaEnAgua = false;
             escalaLinterna9 = 0.0f;
