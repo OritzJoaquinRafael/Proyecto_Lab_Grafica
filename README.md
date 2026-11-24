@@ -45,7 +45,7 @@ El proyecto incluye un ejecutable independiente compilado en modo **Release (x86
 | `7`   | Botes de almas (desplazamiento y flotación en el río) |
 | `8`   | Avance de linternas flotantes (Tōrō Nagashi)          |
 | `9`   | Balanceo y oleaje de linternas flotantes              |
-| `-`   | Recorrido de personaje adicional                      |
+| `? o '`   | Recorrido de personaje adicional                      |
 
 ### Animación jerárquica por Keyframes (Personaje y Linterna 9)
 Para ver la secuencia completa pregrabada, presiona **`F4`** y después **`F2`**:
